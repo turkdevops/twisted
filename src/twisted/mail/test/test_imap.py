@@ -1161,7 +1161,12 @@ class IMAP4HelperTests(TestCase):
             b"BODY[1.3.9.11.HEADER.FIELDS.NOT (Message-Id Date)]<103.69>",
         )
 
-        p = P()
+    def test_fetchParserParseStingPartial(self):
+        """
+        Partial requests starting at 0 and longer than the message
+        do not return a partial response.
+        """
+        p = imap4._FetchParser()
         p.parseString(b"BODY.PEEK[]<0.393216>")
         self.assertEqual(len(p.result), 1)
         self.assertTrue(isinstance(p.result[0], p.Body))
