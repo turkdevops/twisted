@@ -22,7 +22,6 @@ Features
 - twisted.internet.defer.Deferred runs callbacks with chained Deferreds a little faster. (#12284)
 - The reactor now will use a little less CPU when events have been scheduled with callLater(). (#12286)
 - Creation of twisted.python.failure.Failure is now faster. (#12288)
-- twisted.web.server is 1-2% faster in some cases. (#12318)
 
 
 Bugfixes
@@ -72,6 +71,7 @@ Features
 
 - The twisted.web HTTP server and client now reject HTTP header names containing whitespace or other invalid characters by raising twisted.web.http_headers.InvalidHeaderName, improving compliance with RFC 9110. As a side effect, the server is slightly faster. (#12191)
 - twisted.web.client and twisted.web.server now disable the Nagle algorithm (enable TCP_NODELAY), reducing the latency of small HTTP queries. (#12311)
+- twisted.web.server is 1-2% faster in some cases. (#12318)
 
 
 Bugfixes
