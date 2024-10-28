@@ -5724,6 +5724,7 @@ class _FetchParser:
                     # IMAP4rev1 says that if the partial length is greater than
                     # the length of the data, the server should send the entire
                     # data., with a "0" as the partial length
+                    # https://datatracker.ietf.org/doc/html/rfc3501#section-6.4.5
                     base += b"<0>"
             return base
 
