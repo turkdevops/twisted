@@ -348,7 +348,7 @@ class Failure(BaseException):
     def frames(self, frames):
         self._frames = frames
 
-    @deprecatedProperty(Version("Twisted", 24, 10, 0, release_candidate=1))
+    @deprecatedProperty(Version("Twisted", 24, 10, 0))
     def stack(self):
         return []
 
