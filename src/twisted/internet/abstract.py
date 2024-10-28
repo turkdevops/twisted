@@ -260,11 +260,11 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
                 self.dataBuffer = _concatenate(
                     self.dataBuffer, self.offset, self._tempDataBuffer
                 )
-                self.offset = 0
             else:
                 # self.dataBuffer has nothing left to write, so just convert
                 # the list buffer to bytes buffer in a cheaper way:
                 self.dataBuffer = b"".join(self._tempDataBuffer)
+            self.offset = 0
             self._tempDataBuffer = []
             self._tempDataLen = 0
 
