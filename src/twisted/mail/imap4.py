@@ -5692,6 +5692,13 @@ class _FetchParser:
             return self.__bytes__().decode("ascii")
 
         def getBytes(self, length: Optional[int] = None) -> bytes:
+            """
+            Prepare the initial command response for a Fetch BODY request.
+            Interpret the Fetch request from the client and return the
+            appropriate response based on RFC 3501.
+            This is not the body itself of the response, merely the section
+            of the first response line that describes the body part.
+            """
             base = b"BODY"
             part = b""
             separator = b""
