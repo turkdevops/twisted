@@ -6,9 +6,10 @@
 Support for generic select()able objects.
 """
 
+from __future__ import annotations
 
 from socket import AF_INET, AF_INET6, inet_pton
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, Union
 
 from zope.interface import implementer
 
@@ -214,7 +215,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         self.stopReading()
         self.stopWriting()
 
-    def writeSomeData(self, data: bytes) -> None:
+    def writeSomeData(self, data: bytes) -> Union[int, BaseException]:
         """
         Write as much as possible of the given data, immediately.
 

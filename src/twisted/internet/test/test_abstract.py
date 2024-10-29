@@ -7,9 +7,11 @@ reactors.
 """
 from __future__ import annotations
 
-from hypothesis import given, strategies as st, example
+from typing import Union
 
-from twisted.internet.abstract import isIPv6Address, FileDescriptor
+from hypothesis import example, given, strategies as st
+
+from twisted.internet.abstract import FileDescriptor, isIPv6Address
 from twisted.trial.unittest import SynchronousTestCase
 from .test_tcp import _FakeFDSetReactor
 
@@ -79,7 +81,7 @@ class TrackingFileDescriptor(FileDescriptor):
     _writeDisconnected = False
 
     def __init__(
-        self, operations: list[int | bytes], written: list[bytes], send_limit: int
+        self, operations: list[Union[int, bytes]], written: list[bytes], send_limit: int
     ):
         self.operations = operations
         self.written = written
@@ -111,7 +113,7 @@ class WriteBufferingTests(SynchronousTestCase):
     )
     # This catches a bug that was introduced by a performance refactoring:
     @example(operations=[b"abcdef", 0, b"g"])
-    def test_writeBuffering(self, operations: list[bytes | int]) -> None:
+    def test_writeBuffering(self, operations: list[Union[bytes, int]]) -> None:
         """
         A sequence of C{write()} and C{doWrite()} will eventually write all the
         data correctly and in order.
@@ -121,7 +123,7 @@ class WriteBufferingTests(SynchronousTestCase):
             C{writeSomeData()} writeSomeData will successfully write).
         """
         expected = b"".join(op for op in operations if isinstance(op, bytes))
-        written = []
+        written: list[bytes] = []
 
         # Send at most 5 bytes per call to writeSomeData(); default is much
         # higher, of course, but made it smaller so we can have faster
@@ -134,7 +136,7 @@ class WriteBufferingTests(SynchronousTestCase):
 
         while operations:
             if isinstance(operations[0], bytes):
-                fd.write(operations.pop(0))
+                fd.write(operations.pop(0))  # type: ignore[arg-type]
             else:
                 fd.doWrite()
 
