@@ -1,1 +1,1 @@
-Fix over length partial response for iOS mail.app
+twisted.mail.imap.IMAPServer.arg_fetchatt can now detect that a IMAP partial request has been made that is longer than the original message and alter the output of the response in order to match the IMAPRev4 spec.
