@@ -17,7 +17,7 @@ import os
 import re
 import socket
 import warnings
-from typing import Optional, Sequence, Type
+from typing import Any, Optional, Sequence, Type
 from unicodedata import normalize
 
 from zope.interface import directlyProvides, implementer, provider
@@ -26,7 +26,7 @@ from constantly import NamedConstant, Names
 from incremental import Version
 
 from twisted.internet import defer, error, fdesc, interfaces, threads
-from twisted.internet.abstract import isIPAddress, isIPv6Address
+from twisted.internet.abstract import isIPv6Address
 from twisted.internet.address import (
     HostnameAddress,
     IPv4Address,
@@ -774,10 +774,6 @@ class HostnameEndpoint:
         associated with this endpoint.
     @type _hostBytes: L{bytes}
 
-    @ivar _hostStr: the native-string representation of the hostname passed to
-        the constructor, used for exception construction
-    @type _hostStr: native L{str}
-
     @ivar _badHostname: a flag - hopefully false!  - indicating that an invalid
         hostname was passed to the constructor.  This might be a textual
         hostname that isn't valid IDNA, or non-ASCII bytes.
@@ -789,8 +785,14 @@ class HostnameEndpoint:
     _DEFAULT_ATTEMPT_DELAY = 0.3
 
     def __init__(
-        self, reactor, host, port, timeout=30, bindAddress=None, attemptDelay=None
-    ):
+        self,
+        reactor: Any,
+        host: str | bytes,
+        port: int,
+        timeout: float = 30,
+        bindAddress: bytes | str | tuple[bytes | str, int] | None = None,
+        attemptDelay: float | None = None,
+    ) -> None:
         """
         Create a L{HostnameEndpoint}.
 
@@ -833,9 +835,9 @@ class HostnameEndpoint:
         [self._badHostname, self._hostBytes, self._hostText] = self._hostAsBytesAndText(
             host
         )
-        self._hostStr = self._hostBytes if bytes is str else self._hostText
         self._port = port
         self._timeout = timeout
+
         if bindAddress is not None:
             if isinstance(bindAddress, (bytes, str)):
                 bindAddress = (bindAddress, 0)
@@ -852,21 +854,25 @@ class HostnameEndpoint:
 
         @return: A L{str}
         """
-        if self._badHostname:
-            # Use the backslash-encoded version of the string passed to the
-            # constructor, which is already a native string.
-            host = self._hostStr
-        elif isIPv6Address(self._hostStr):
-            host = f"[{self._hostStr}]"
-        else:
-            # Convert the bytes representation to a native string to ensure
-            # that we display the punycoded version of the hostname, which is
-            # more useful than any IDN version as it can be easily copy-pasted
-            # into debugging tools.
-            host = nativeString(self._hostBytes)
-        return "".join(["<HostnameEndpoint ", host, ":", str(self._port), ">"])
+        host = (
+            # It the hostname is bad, use the backslash-encoded version of the
+            # string passed to the constructor, which is already a string.
+            self._hostText
+            if self._badHostname
+            else (
+                # Add some square brackets if it's an IPv6 address.
+                f"[{self._hostText}]"
+                if isIPv6Address(self._hostText)
+                # Convert the bytes representation to a native string to ensure
+                # that we display the punycoded version of the hostname, which is
+                # more useful than any IDN version as it can be easily copy-pasted
+                # into debugging tools.
+                else self._hostBytes.decode("ascii")
+            )
+        )
+        return f"<HostnameEndpoint {host}:{self._port}>"
 
-    def _getNameResolverAndMaybeWarn(self, reactor):
+    def _getNameResolverAndMaybeWarn(self, reactor: object) -> IHostnameResolver:
         """
         Retrieve a C{nameResolver} callable and warn the caller's
         caller that using a reactor which doesn't provide
@@ -894,7 +900,7 @@ class HostnameEndpoint:
         return reactor.nameResolver
 
     @staticmethod
-    def _hostAsBytesAndText(host):
+    def _hostAsBytesAndText(host: bytes | str) -> tuple[bool, bytes, str]:
         """
         For various reasons (documented in the C{@ivar}'s in the class
         docstring) we need both a textual and a binary representation of the
@@ -906,37 +912,34 @@ class HostnameEndpoint:
         this up in the future and just operate in terms of text internally.
 
         @param host: A hostname to convert.
-        @type host: L{bytes} or C{str}
 
         @return: a 3-tuple of C{(invalid, bytes, text)} where C{invalid} is a
             boolean indicating the validity of the hostname, C{bytes} is a
             binary representation of C{host}, and C{text} is a textual
             representation of C{host}.
         """
+        invalid = False
         if isinstance(host, bytes):
-            if isIPAddress(host) or isIPv6Address(host):
-                return False, host, host.decode("ascii")
-            else:
-                try:
-                    return False, host, _idnaText(host)
-                except UnicodeError:
-                    # Convert the host to _some_ kind of text, to handle below.
-                    host = host.decode("charmap")
+            hostBytes = host
+            try:
+                hostText = _idnaText(hostBytes)
+            except UnicodeError:
+                hostText = hostBytes.decode("charmap")
+                if not isIPv6Address(hostText):
+                    invalid = True
         else:
-            host = normalize("NFC", host)
-            if isIPAddress(host) or isIPv6Address(host):
-                return False, host.encode("ascii"), host
+            hostText = normalize("NFC", host)
+            if isIPv6Address(hostText):
+                hostBytes = hostText.encode("ascii")
             else:
                 try:
-                    return False, _idnaBytes(host), host
+                    hostBytes = _idnaBytes(hostText)
                 except UnicodeError:
-                    pass
-        # `host` has been converted to text by this point either way; it's
-        # invalid as a hostname, and so may contain unprintable characters and
-        # such. escape it with backslashes so the user can get _some_ guess as
-        # to what went wrong.
-        asciibytes = host.encode("ascii", "backslashreplace")
-        return True, asciibytes, asciibytes.decode("ascii")
+                    invalid = True
+        if invalid:
+            hostBytes = hostText.encode("ascii", "backslashreplace")
+            hostText = hostBytes.decode("ascii")
+        return invalid, hostBytes, hostText
 
     def connect(self, protocolFactory):
         """
@@ -952,7 +955,7 @@ class HostnameEndpoint:
             or fails a connection-related error.
         """
         if self._badHostname:
-            return defer.fail(ValueError(f"invalid hostname: {self._hostStr}"))
+            return defer.fail(ValueError(f"invalid hostname: {self._hostText}"))
 
         d = Deferred()
         addresses = []
@@ -977,7 +980,7 @@ class HostnameEndpoint:
 
         d.addErrback(
             lambda ignored: defer.fail(
-                error.DNSLookupError(f"Couldn't find the hostname '{self._hostStr}'")
+                error.DNSLookupError(f"Couldn't find the hostname '{self._hostText}'")
             )
         )
 
@@ -1037,7 +1040,7 @@ class HostnameEndpoint:
             """
             if not endpoints:
                 raise error.DNSLookupError(
-                    f"no results for hostname lookup: {self._hostStr}"
+                    f"no results for hostname lookup: {self._hostText}"
                 )
             iterEndpoints = iter(endpoints)
             pending = []
@@ -2311,10 +2314,12 @@ def _parseClientTLS(
             trustRoot=_parseTrustRootPath(trustRoots),
             clientCertificate=_privateCertFromPaths(certificate, privateKey),
         ),
-        clientFromString(reactor, endpoint)
-        if endpoint is not None
-        else HostnameEndpoint(
-            reactor, _idnaBytes(host), port, timeout, (bindAddress, 0)
+        (
+            clientFromString(reactor, endpoint)
+            if endpoint is not None
+            else HostnameEndpoint(
+                reactor, _idnaBytes(host), port, timeout, (bindAddress, 0)
+            )
         ),
     )
 

@@ -2441,7 +2441,7 @@ class HostnameEndpointIDNATests(unittest.SynchronousTestCase):
         self.assertEqual(endpoint._hostBytes, self.sampleIDNABytes)
         self.assertEqual(endpoint._hostText, self.sampleIDNAText)
 
-    def test_nonNormalizedText(self):
+    def test_nonNormalizedText(self) -> None:
         """
         A L{HostnameEndpoint} constructed with NFD-normalized text will store
         the NFC-normalized version of that text.
@@ -2727,7 +2727,7 @@ class HostnameEndpointBindAddressTypes(unittest.TestCase):
         ep = endpoints.HostnameEndpoint(self.drr, b"example.com", 80, bindAddress=ba)
         self.assertEqual(ep._bindAddress, ("1.2.3.4", 1234))
 
-    def test_none(self):
+    def test_none(self) -> None:
         ba = None
         ep = endpoints.HostnameEndpoint(self.drr, b"example.com", 80, bindAddress=ba)
         self.assertEqual(ep._bindAddress, None)

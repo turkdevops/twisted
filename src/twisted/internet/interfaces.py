@@ -1477,7 +1477,7 @@ class IReactorPluggableNameResolver(Interface):
     set to a user-supplied object.
     """
 
-    nameResolver = Attribute(
+    nameResolver: IHostnameResolver = Attribute(
         """
         Read-only attribute; the resolver installed with L{installResolver}.
         An L{IHostnameResolver}.
