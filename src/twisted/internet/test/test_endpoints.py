@@ -4215,7 +4215,7 @@ class WrapClientTLSParserTests(unittest.TestCase):
     Tests for L{_TLSClientEndpointParser}.
     """
 
-    def test_hostnameEndpointConstruction(self):
+    def test_hostnameEndpointConstruction(self) -> None:
         """
         A L{HostnameEndpoint} is constructed from parameters passed to
         L{clientFromString}.
@@ -4231,6 +4231,23 @@ class WrapClientTLSParserTests(unittest.TestCase):
         self.assertEqual(hostnameEndpoint._port, 443)
         self.assertEqual(hostnameEndpoint._timeout, 10)
         self.assertEqual(hostnameEndpoint._bindAddress, ("127.0.0.1", 0))
+
+    def test_hostnameEndpointConstructionNoParameters(self) -> None:
+        """
+        A L{HostnameEndpoint} is constructed from parameters passed to
+        L{clientFromString} with reasonable defaults.
+        """
+        reactor = object()
+        endpoint = endpoints.clientFromString(
+            reactor,
+            "tls:example.com:443",
+        )
+        hostnameEndpoint = endpoint._wrappedEndpoint
+        self.assertIs(hostnameEndpoint._reactor, reactor)
+        self.assertEqual(hostnameEndpoint._hostBytes, b"example.com")
+        self.assertEqual(hostnameEndpoint._port, 443)
+        self.assertEqual(hostnameEndpoint._timeout, 30)
+        self.assertEqual(hostnameEndpoint._bindAddress, None)
 
     def test_utf8Encoding(self):
         """

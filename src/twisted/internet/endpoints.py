@@ -2346,7 +2346,11 @@ def _parseClientTLS(
             clientFromString(reactor, endpoint)
             if endpoint is not None
             else HostnameEndpoint(
-                reactor, _idnaBytes(host), portint, timeoutint, (bindAddress, 0)
+                reactor,
+                _idnaBytes(host),
+                portint,
+                timeoutint,
+                None if bindAddress is None else (bindAddress, 0),
             )
         ),
     )
