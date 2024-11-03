@@ -1,0 +1,3 @@
+Fixed a regression in 24.10.0, where
+twisted.internet.endpoints.clientFromString where "tls:" endpoints were causing
+an exception.
