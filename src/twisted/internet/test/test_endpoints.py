@@ -2441,7 +2441,7 @@ class HostnameEndpointIDNATests(unittest.SynchronousTestCase):
         self.assertEqual(endpoint._hostBytes, self.sampleIDNABytes)
         self.assertEqual(endpoint._hostText, self.sampleIDNAText)
 
-    def test_nonNormalizedText(self):
+    def test_nonNormalizedText(self) -> None:
         """
         A L{HostnameEndpoint} constructed with NFD-normalized text will store
         the NFC-normalized version of that text.
@@ -2727,7 +2727,7 @@ class HostnameEndpointBindAddressTypes(unittest.TestCase):
         ep = endpoints.HostnameEndpoint(self.drr, b"example.com", 80, bindAddress=ba)
         self.assertEqual(ep._bindAddress, ("1.2.3.4", 1234))
 
-    def test_none(self):
+    def test_none(self) -> None:
         ba = None
         ep = endpoints.HostnameEndpoint(self.drr, b"example.com", 80, bindAddress=ba)
         self.assertEqual(ep._bindAddress, None)
@@ -4215,7 +4215,7 @@ class WrapClientTLSParserTests(unittest.TestCase):
     Tests for L{_TLSClientEndpointParser}.
     """
 
-    def test_hostnameEndpointConstruction(self):
+    def test_hostnameEndpointConstruction(self) -> None:
         """
         A L{HostnameEndpoint} is constructed from parameters passed to
         L{clientFromString}.
@@ -4231,6 +4231,23 @@ class WrapClientTLSParserTests(unittest.TestCase):
         self.assertEqual(hostnameEndpoint._port, 443)
         self.assertEqual(hostnameEndpoint._timeout, 10)
         self.assertEqual(hostnameEndpoint._bindAddress, ("127.0.0.1", 0))
+
+    def test_hostnameEndpointConstructionNoParameters(self) -> None:
+        """
+        A L{HostnameEndpoint} is constructed from parameters passed to
+        L{clientFromString} with reasonable defaults.
+        """
+        reactor = object()
+        endpoint = endpoints.clientFromString(
+            reactor,
+            "tls:example.com:443",
+        )
+        hostnameEndpoint = endpoint._wrappedEndpoint
+        self.assertIs(hostnameEndpoint._reactor, reactor)
+        self.assertEqual(hostnameEndpoint._hostBytes, b"example.com")
+        self.assertEqual(hostnameEndpoint._port, 443)
+        self.assertEqual(hostnameEndpoint._timeout, 30)
+        self.assertEqual(hostnameEndpoint._bindAddress, None)
 
     def test_utf8Encoding(self):
         """

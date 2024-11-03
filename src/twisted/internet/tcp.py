@@ -14,7 +14,7 @@ import os
 import socket
 import struct
 import sys
-from typing import Callable, ClassVar, List, Optional, Union
+from typing import Any, Callable, ClassVar, List, Optional, Union
 
 from zope.interface import Interface, implementer
 
@@ -29,6 +29,7 @@ from twisted.internet.interfaces import (
     ISystemHandle,
     ITCPTransport,
 )
+from twisted.internet.protocol import ClientFactory
 from twisted.logger import ILogObserver, LogEvent, Logger
 from twisted.python import deprecate, versions
 from twisted.python.runtime import platformType
@@ -1505,9 +1506,17 @@ class Connector(base.BaseConnector):
     @type _addressType: C{type}
     """
 
-    _addressType = address.IPv4Address
+    _addressType: type[address.IPv4Address | address.IPv6Address] = address.IPv4Address
 
-    def __init__(self, host, port, factory, timeout, bindAddress, reactor=None):
+    def __init__(
+        self,
+        host: str,
+        port: int | str,
+        factory: ClientFactory,
+        timeout: float,
+        bindAddress: str | tuple[str, int] | None,
+        reactor: Any = None,
+    ) -> None:
         if isinstance(port, str):
             try:
                 port = socket.getservbyname(port, "tcp")
@@ -1519,7 +1528,7 @@ class Connector(base.BaseConnector):
         self.bindAddress = bindAddress
         base.BaseConnector.__init__(self, factory, timeout, reactor)
 
-    def _makeTransport(self):
+    def _makeTransport(self) -> Client:
         """
         Create a L{Client} bound to this L{Connector}.
 

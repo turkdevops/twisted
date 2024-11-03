@@ -1079,7 +1079,7 @@ class AgentTests(
         endpoint = self.agent._getEndpoint(
             URI.fromBytes(b"http://%b:%d" % (expectedHost, expectedPort))
         )
-        self.assertEqual(endpoint._hostStr, "example.com")
+        self.assertEqual(endpoint._hostText, "example.com")
         self.assertEqual(endpoint._port, expectedPort)
         self.assertIsInstance(endpoint, HostnameEndpoint)
 
@@ -1434,7 +1434,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin, IntegrationTestingMi
         If a host is passed, the endpoint respects it.
         """
         endpoint = self.makeEndpoint(host=b"example.com")
-        self.assertEqual(endpoint._wrappedEndpoint._hostStr, "example.com")
+        self.assertEqual(endpoint._wrappedEndpoint._hostText, "example.com")
 
     def test_portArgumentIsRespected(self):
         """
