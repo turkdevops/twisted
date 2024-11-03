@@ -688,7 +688,10 @@ class IResolver(IResolverSimple):
 
 class IReactorTCP(Interface):
     def listenTCP(
-        port: int, factory: "ServerFactory", backlog: int, interface: str
+        port: int,
+        factory: "ServerFactory",
+        backlog: int = 50,
+        interface: str = "",
     ) -> "IListeningPort":
         """
         Connects a given protocol factory to the given numeric TCP/IP port.
@@ -712,8 +715,8 @@ class IReactorTCP(Interface):
         host: str,
         port: int,
         factory: "ClientFactory",
-        timeout: float,
-        bindAddress: Optional[Tuple[str, int]],
+        timeout: float = 30.0,
+        bindAddress: Optional[Tuple[str, int]] = None,
     ) -> IConnector:
         """
         Connect a TCP client.
