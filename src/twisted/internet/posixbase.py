@@ -6,6 +6,7 @@
 Posix reactor base class
 """
 
+from __future__ import annotations
 
 import socket
 import sys
