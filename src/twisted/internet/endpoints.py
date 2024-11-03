@@ -12,15 +12,16 @@ parsed by the L{clientFromString} and L{serverFromString} functions.
 @since: 10.1
 """
 
+from __future__ import annotations
 
 import os
 import re
 import socket
 import warnings
-from typing import Any, Optional, Sequence, Type
+from typing import Any, Iterable, Optional, Sequence, Type
 from unicodedata import normalize
 
-from zope.interface import directlyProvides, implementer, provider
+from zope.interface import directlyProvides, implementer
 
 from constantly import NamedConstant, Names
 from incremental import Version
@@ -37,9 +38,13 @@ from twisted.internet.interfaces import (
     IAddress,
     IHostnameResolver,
     IHostResolution,
+    IOpenSSLClientConnectionCreator,
+    IProtocol,
+    IProtocolFactory,
     IReactorPluggableNameResolver,
     IReactorSocket,
     IResolutionReceiver,
+    IStreamClientEndpoint,
     IStreamClientEndpointStringParserWithReactor,
     IStreamServerEndpointStringParser,
 )
@@ -201,14 +206,16 @@ class _WrappingFactory(ClientFactory):
     # Type is wrong.  See https://twistedmatrix.com/trac/ticket/10005#ticket
     protocol = _WrappingProtocol  # type: ignore[assignment]
 
-    def __init__(self, wrappedFactory):
+    def __init__(self, wrappedFactory: IProtocolFactory) -> None:
         """
         @param wrappedFactory: A provider of I{IProtocolFactory} whose
             buildProtocol method will be called and whose resulting protocol
             will be wrapped.
         """
         self._wrappedFactory = wrappedFactory
-        self._onConnection = defer.Deferred(canceller=self._canceller)
+        self._onConnection: defer.Deferred[IProtocol] = defer.Deferred(
+            canceller=self._canceller
+        )
 
     def startedConnecting(self, connector):
         """
@@ -567,7 +574,14 @@ class TCP4ClientEndpoint:
     TCP client endpoint with an IPv4 configuration.
     """
 
-    def __init__(self, reactor, host, port, timeout=30, bindAddress=None):
+    def __init__(
+        self,
+        reactor: Any,
+        host: str,
+        port: int,
+        timeout: float = 30,
+        bindAddress: str | tuple[bytes | str, int] | None = None,
+    ) -> None:
         """
         @param reactor: An L{IReactorTCP} provider
 
@@ -591,7 +605,7 @@ class TCP4ClientEndpoint:
         self._timeout = timeout
         self._bindAddress = bindAddress
 
-    def connect(self, protocolFactory):
+    def connect(self, protocolFactory: IProtocolFactory) -> Deferred[IProtocol]:
         """
         Implement L{IStreamClientEndpoint.connect} to connect via TCP.
         """
@@ -665,7 +679,9 @@ class TCP6ClientEndpoint:
         """
         return self._deferToThread(self._getaddrinfo, host, 0, socket.AF_INET6)
 
-    def _resolvedHostConnect(self, resolvedHost, protocolFactory):
+    def _resolvedHostConnect(
+        self, resolvedHost: str, protocolFactory: IProtocolFactory
+    ) -> Deferred[IProtocol]:
         """
         Connect to the server using the resolved hostname.
         """
@@ -801,7 +817,7 @@ class HostnameEndpoint:
             L{IReactorPluggableNameResolver} or L{IReactorPluggableResolver}.
 
         @param host: A hostname to connect to.
-        @type host: L{bytes} or L{unicode}
+        @type host: L{bytes} or L{str}
 
         @param port: The port number to connect to.
         @type port: L{int}
@@ -941,7 +957,7 @@ class HostnameEndpoint:
             hostText = hostBytes.decode("ascii")
         return invalid, hostBytes, hostText
 
-    def connect(self, protocolFactory):
+    def connect(self, protocolFactory: IProtocolFactory) -> Deferred[IProtocol]:
         """
         Attempts a connection to each resolved address, and returns a
         connection which is established first.
@@ -957,35 +973,36 @@ class HostnameEndpoint:
         if self._badHostname:
             return defer.fail(ValueError(f"invalid hostname: {self._hostText}"))
 
-        d = Deferred()
-        addresses = []
+        resolved: Deferred[list[IAddress]] = Deferred()
+        addresses: list[IAddress] = []
 
-        @provider(IResolutionReceiver)
+        @implementer(IResolutionReceiver)
         class EndpointReceiver:
             @staticmethod
-            def resolutionBegan(resolutionInProgress):
+            def resolutionBegan(resolutionInProgress: IHostResolution) -> None:
                 pass
 
             @staticmethod
-            def addressResolved(address):
+            def addressResolved(address: IAddress) -> None:
                 addresses.append(address)
 
             @staticmethod
-            def resolutionComplete():
-                d.callback(addresses)
+            def resolutionComplete() -> None:
+                resolved.callback(addresses)
 
         self._nameResolver.resolveHostName(
-            EndpointReceiver, self._hostText, portNumber=self._port
+            EndpointReceiver(), self._hostText, portNumber=self._port
         )
 
-        d.addErrback(
+        resolved.addErrback(
             lambda ignored: defer.fail(
                 error.DNSLookupError(f"Couldn't find the hostname '{self._hostText}'")
             )
         )
 
-        @d.addCallback
-        def resolvedAddressesToEndpoints(addresses):
+        def resolvedAddressesToEndpoints(
+            addresses: Iterable[IAddress],
+        ) -> Iterable[TCP6ClientEndpoint | TCP4ClientEndpoint]:
             # Yield an endpoint for every address resolved from the name.
             for eachAddress in addresses:
                 if isinstance(eachAddress, IPv6Address):
@@ -1005,22 +1022,24 @@ class HostnameEndpoint:
                         self._bindAddress,
                     )
 
-        d.addCallback(list)
+        iterd = resolved.addCallback(resolvedAddressesToEndpoints)
+        listd = iterd.addCallback(list)
 
-        def _canceller(d):
+        def _canceller(cancelled: Deferred[IProtocol]) -> None:
             # This canceller must remain defined outside of
             # `startConnectionAttempts`, because Deferred should not
             # participate in cycles with their cancellers; that would create a
             # potentially problematic circular reference and possibly
             # gc.garbage.
-            d.errback(
+            cancelled.errback(
                 error.ConnectingCancelledError(
                     HostnameAddress(self._hostBytes, self._port)
                 )
             )
 
-        @d.addCallback
-        def startConnectionAttempts(endpoints):
+        def startConnectionAttempts(
+            endpoints: list[TCP6ClientEndpoint | TCP4ClientEndpoint],
+        ) -> Deferred[IProtocol]:
             """
             Given a sequence of endpoints obtained via name resolution, start
             connecting to a new one every C{self._attemptDelay} seconds until
@@ -1043,59 +1062,65 @@ class HostnameEndpoint:
                     f"no results for hostname lookup: {self._hostText}"
                 )
             iterEndpoints = iter(endpoints)
-            pending = []
-            failures = []
-            winner = defer.Deferred(canceller=_canceller)
+            pending: list[defer.Deferred[IProtocol]] = []
+            failures: list[Failure] = []
+            winner: defer.Deferred[IProtocol] = defer.Deferred(canceller=_canceller)
 
-            def checkDone():
-                if pending or checkDone.completed or checkDone.endpointsLeft:
+            checkDoneCompleted = False
+            checkDoneEndpointsLeft = True
+
+            def checkDone() -> None:
+                if pending or checkDoneCompleted or checkDoneEndpointsLeft:
                     return
                 winner.errback(failures.pop())
 
-            checkDone.completed = False
-            checkDone.endpointsLeft = True
-
             @LoopingCall
-            def iterateEndpoint():
+            def iterateEndpoint() -> None:
+                nonlocal checkDoneEndpointsLeft
                 endpoint = next(iterEndpoints, None)
                 if endpoint is None:
                     # The list of endpoints ends.
-                    checkDone.endpointsLeft = False
+                    checkDoneEndpointsLeft = False
                     checkDone()
                     return
 
                 eachAttempt = endpoint.connect(protocolFactory)
                 pending.append(eachAttempt)
 
-                @eachAttempt.addBoth
-                def noLongerPending(result):
+                def noLongerPending(result: IProtocol | Failure) -> IProtocol | Failure:
                     pending.remove(eachAttempt)
                     return result
 
-                @eachAttempt.addCallback
-                def succeeded(result):
+                successState = eachAttempt.addBoth(noLongerPending)
+
+                def succeeded(result: IProtocol) -> None:
                     winner.callback(result)
 
-                @eachAttempt.addErrback
+                successState.addCallback(succeeded)
+
                 def failed(reason):
                     failures.append(reason)
                     checkDone()
 
+                successState.addErrback(failed)
+
             iterateEndpoint.clock = self._reactor
             iterateEndpoint.start(self._attemptDelay)
 
-            @winner.addBoth
-            def cancelRemainingPending(result):
-                checkDone.completed = True
+            def cancelRemainingPending(
+                result: IProtocol | Failure,
+            ) -> IProtocol | Failure:
+                nonlocal checkDoneCompleted
+                checkDoneCompleted = True
                 for remaining in pending[:]:
                     remaining.cancel()
                 if iterateEndpoint.running:
                     iterateEndpoint.stop()
                 return result
 
-            return winner
+            return winner.addBoth(cancelRemainingPending)
 
-        return d
+        return listd.addCallback(startConnectionAttempts)
 
     def _fallbackNameResolution(self, host, port):
         """
@@ -2221,7 +2246,10 @@ class _WrapperServerEndpoint:
         return self._wrappedEndpoint.listen(self._wrapperFactory(protocolFactory))
 
 
-def wrapClientTLS(connectionCreator, wrappedEndpoint):
+def wrapClientTLS(
+    connectionCreator: IOpenSSLClientConnectionCreator,
+    wrappedEndpoint: IStreamClientEndpoint,
+) -> _WrapperEndpoint:
     """
     Wrap an endpoint which upgrades to TLS as soon as the connection is
     established.
@@ -2253,17 +2281,17 @@ def wrapClientTLS(connectionCreator, wrappedEndpoint):
 
 
 def _parseClientTLS(
-    reactor,
-    host,
-    port,
-    timeout=b"30",
-    bindAddress=None,
-    certificate=None,
-    privateKey=None,
-    trustRoots=None,
-    endpoint=None,
-    **kwargs,
-):
+    reactor: Any,
+    host: bytes | str,
+    port: bytes | str,
+    timeout: bytes | str = b"30",
+    bindAddress: bytes | str | None = None,
+    certificate: bytes | str | None = None,
+    privateKey: bytes | str | None = None,
+    trustRoots: bytes | str | None = None,
+    endpoint: bytes | str | None = None,
+    **kwargs: object,
+) -> IStreamClientEndpoint:
     """
     Internal method to construct an endpoint from string parameters.
 
@@ -2306,8 +2334,8 @@ def _parseClientTLS(
         if isinstance(bindAddress, str) or bindAddress is None
         else bindAddress.decode("utf-8")
     )
-    port = int(port)
-    timeout = int(timeout)
+    portint = int(port)
+    timeoutint = int(timeout)
     return wrapClientTLS(
         optionsForClientTLS(
             host,
@@ -2318,7 +2346,7 @@ def _parseClientTLS(
             clientFromString(reactor, endpoint)
             if endpoint is not None
             else HostnameEndpoint(
-                reactor, _idnaBytes(host), port, timeout, (bindAddress, 0)
+                reactor, _idnaBytes(host), portint, timeoutint, (bindAddress, 0)
             )
         ),
     )
