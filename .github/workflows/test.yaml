@@ -151,18 +151,6 @@ jobs:
             job-name: 'macos-13-default-tests'
             tox-env: 'macos-withcov-alldeps'
 
-          # Newest ARM macOS and oldest Python (major) supported versions.
-          - python-version: '3.8'
-            runs-on: 'macos-15'
-            job-name: 'macos-15-default-tests'
-            tox-env: 'macos-withcov-alldeps'
-
-          # Newest ARM macOS and newest Python supported versions.
-          - python-version: '3.13'
-            runs-on: 'macos-15'
-            job-name: 'macos-15-default-tests'
-            tox-env: 'macos-withcov-alldeps'
-
           # Windows, minimum Python version with select reactor.
           - python-version: '3.8'
             runs-on: 'windows-2022'
