@@ -139,16 +139,16 @@ jobs:
           # Just Python 3.13 with default settings.
           - python-version: '3.13'
 
-          # Newest macOS and oldest Python (major) supported versions.
+          # Newest Intel macOS and oldest Python (major) supported versions.
           - python-version: '3.8'
-            runs-on: 'macos-12'
-            job-name: 'macos-12-default-tests'
+            runs-on: 'macos-13'
+            job-name: 'macos-13-default-tests'
             tox-env: 'macos-withcov-alldeps'
 
-          # Newest macOS and newest Python supported versions.
+          # Newest Intel macOS and newest Python supported versions.
           - python-version: '3.13'
-            runs-on: 'macos-12'
-            job-name: 'macos-12-default-tests'
+            runs-on: 'macos-13'
+            job-name: 'macos-13-default-tests'
             tox-env: 'macos-withcov-alldeps'
 
           # Windows, minimum Python version with select reactor.
