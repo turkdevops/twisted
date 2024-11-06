@@ -145,6 +145,13 @@ jobs:
             job-name: 'macos-13-default-tests'
             tox-env: 'macos-withcov-alldeps'
 
+          # TODO: just trying out 14 too in case that works (arm is ok) and it is an issue with 15
+          # Newest ARM macOS and newest Python supported versions.
+          - python-version: '3.13'
+            runs-on: 'macos-14'
+            job-name: 'macos-14-default-tests'
+            tox-env: 'macos-withcov-alldeps'
+
           # Newest ARM macOS and newest Python supported versions.
           - python-version: '3.13'
             runs-on: 'macos-15'
