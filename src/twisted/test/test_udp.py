@@ -581,9 +581,12 @@ class MulticastTests(TestCase):
         self.server = Server()
         self.client = Client()
         # multicast won't work if we listen over loopback, apparently
-        self.port1 = reactor.listenMulticast(0, self.server)
-        self.port2 = reactor.listenMulticast(0, self.client)
-        self.client.transport.connect("127.0.0.1", self.server.transport.getHost().port)
+        self.port1 = reactor.listenMulticast(0, self.server, "::1")
+        self.port2 = reactor.listenMulticast(0, self.client, "::1")
+        self.client.transport.connect(
+            "::1",
+            self.server.transport.getHost().port,
+        )
 
     def tearDown(self):
         return gatherResults(
@@ -594,10 +597,13 @@ class MulticastTests(TestCase):
         )
 
     def testTTL(self):
-        for o in self.client, self.server:
+        def checkttl(o):
             self.assertEqual(o.transport.getTTL(), 1)
             o.transport.setTTL(2)
             self.assertEqual(o.transport.getTTL(), 2)
+
+        checkttl(self.client)
+        checkttl(self.server)
 
     def test_loopback(self):
         """
@@ -657,20 +663,21 @@ class MulticastTests(TestCase):
         """
         Test that multicast a group can be joined and left.
         """
-        d = self.client.transport.joinGroup("225.0.0.250")
+        group = "ff01::0"
+        d = self.client.transport.joinGroup(group, "::1")
 
         def clientJoined(ignored):
-            return self.client.transport.leaveGroup("225.0.0.250")
+            return self.client.transport.leaveGroup(group, "::1")
 
         d.addCallback(clientJoined)
 
         def clientLeft(ignored):
-            return self.server.transport.joinGroup("225.0.0.250")
+            return self.server.transport.joinGroup(group, "::1")
 
         d.addCallback(clientLeft)
 
         def serverJoined(ignored):
-            return self.server.transport.leaveGroup("225.0.0.250")
+            return self.server.transport.leaveGroup(group, "::1")
 
         d.addCallback(serverJoined)
 

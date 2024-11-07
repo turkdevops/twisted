@@ -1333,10 +1333,10 @@ class IReactorCore(Interface):
         "I{during shutdown} and C{False} the rest of the time."
     )
 
-    def resolve(name: str, timeout: Sequence[int]) -> "Deferred[str]":
+    def resolve(name: str, timeout: Sequence[int] = (1, 3, 11, 45)) -> "Deferred[str]":
         """
-        Return a L{twisted.internet.defer.Deferred} that will resolve
-        a hostname.
+        Return a L{twisted.internet.defer.Deferred} that will resolve a
+        hostname.
         """
 
     def run() -> None:

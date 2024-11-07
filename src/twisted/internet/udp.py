@@ -20,10 +20,13 @@ Please do not use this module directly.
 import socket
 import struct
 import warnings
-from typing import Optional
+from typing import Any, Optional
 
 from zope.interface import implementer
 
+from twisted.internet.abstract import isIPAddress, isIPv6Address
+from twisted.internet.defer import Deferred, succeed
+from twisted.internet.interfaces import IReactorCore
 from twisted.python.runtime import platformType
 
 if platformType == "win32":
@@ -56,7 +59,7 @@ else:
 
 # Twisted Imports
 from twisted.internet import abstract, address, base, defer, error, interfaces
-from twisted.python import failure, log
+from twisted.python import log
 
 
 @implementer(
@@ -81,8 +84,8 @@ class Port(base.BasePort):
         L{Port}).
     """
 
-    addressFamily = socket.AF_INET
-    socketType = socket.SOCK_DGRAM
+    addressFamily: socket.AddressFamily = socket.AF_INET
+    socketType: socket.SocketKind = socket.SOCK_DGRAM
     maxThroughput = 256 * 1024
 
     _realPortNumber: Optional[int] = None
@@ -440,60 +443,101 @@ class Port(base.BasePort):
         return bool(self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST))
 
 
+def _maybeResolve(reactor: IReactorCore, addr: str) -> Deferred[str]:
+    if isIPv6Address(addr) or isIPAddress(addr):
+        return succeed(addr)
+    return reactor.resolve(addr)
+
+
 class MulticastMixin:
     """
     Implement multicast functionality.
     """
 
+    addressFamily: socket.AddressFamily
+    reactor: Any
+    socket: socket.socket
+
+    @property
+    def _ipproto(self) -> int:
+        return (
+            socket.IPPROTO_IP
+            if self.addressFamily == socket.AF_INET
+            else socket.IPPROTO_IPV6
+        )
+
+    @property
+    def _multiloop(self) -> int:
+        return (
+            socket.IP_MULTICAST_LOOP
+            if self.addressFamily == socket.AF_INET
+            else socket.IPV6_MULTICAST_LOOP
+        )
+
+    @property
+    def _multiif(self) -> int:
+        return (
+            socket.IP_MULTICAST_IF
+            if self.addressFamily == socket.AF_INET
+            else socket.IPV6_MULTICAST_IF
+        )
+
     def getOutgoingInterface(self):
-        i = self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF)
+        i = self.socket.getsockopt(self._ipproto, self._multiif)
         return socket.inet_ntoa(struct.pack("@i", i))
 
     def setOutgoingInterface(self, addr):
         """Returns Deferred of success."""
-        return self.reactor.resolve(addr).addCallback(self._setInterface)
+        return _maybeResolve(self.reactor, addr).addCallback(self._setInterface)
 
     def _setInterface(self, addr):
         i = socket.inet_aton(addr)
-        self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, i)
+        self.socket.setsockopt(self._ipproto, socket.IP_MULTICAST_IF, i)
         return 1
 
     def getLoopbackMode(self):
-        return self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP)
+        return self.socket.getsockopt(self._ipproto, self._multiloop)
 
     def setLoopbackMode(self, mode):
         mode = struct.pack("b", bool(mode))
-        self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, mode)
+        self.socket.setsockopt(self._ipproto, self._multiloop, mode)
 
     def getTTL(self):
-        return self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL)
+        return self.socket.getsockopt(self._ipproto, socket.IP_MULTICAST_TTL)
 
     def setTTL(self, ttl):
         ttl = struct.pack("B", ttl)
-        self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
+        self.socket.setsockopt(self._ipproto, socket.IP_MULTICAST_TTL, ttl)
+
+    def _joinleave(self, addr: str, interface: str, join: bool) -> Deferred[None]:
+        cmd = socket.IP_ADD_MEMBERSHIP if join else socket.IP_DROP_MEMBERSHIP
+
+        async def impl() -> None:
+            resaddr = await _maybeResolve(self.reactor, addr)
+            resif = await _maybeResolve(self.reactor, interface)
+
+            packaddr = _addrpack(resaddr)
+            packif = _addrpack(resif)
+            try:
+                self.socket.setsockopt(self._ipproto, cmd, packaddr + packif)
+            except OSError as e:
+                raise error.MulticastJoinError(addr, interface, *e.args) from e
+
+        return Deferred.fromCoroutine(impl())
 
     def joinGroup(self, addr, interface=""):
         """Join a multicast group. Returns Deferred of success."""
-        return self.reactor.resolve(addr).addCallback(self._joinAddr1, interface, 1)
-
-    def _joinAddr1(self, addr, interface, join):
-        return self.reactor.resolve(interface).addCallback(self._joinAddr2, addr, join)
-
-    def _joinAddr2(self, interface, addr, join):
-        addr = socket.inet_aton(addr)
-        interface = socket.inet_aton(interface)
-        if join:
-            cmd = socket.IP_ADD_MEMBERSHIP
-        else:
-            cmd = socket.IP_DROP_MEMBERSHIP
-        try:
-            self.socket.setsockopt(socket.IPPROTO_IP, cmd, addr + interface)
-        except OSError as e:
-            return failure.Failure(error.MulticastJoinError(addr, interface, *e.args))
+        return self._joinleave(addr, interface, True)
 
     def leaveGroup(self, addr, interface=""):
         """Leave multicast group, return Deferred of success."""
-        return self.reactor.resolve(addr).addCallback(self._joinAddr1, interface, 0)
+        return self._joinleave(addr, interface, False)
+
+
+def _addrpack(addr: str) -> bytes:
+    return socket.inet_pton(
+        socket.AF_INET if isIPAddress(addr) else socket.AF_INET6, addr
+    )
 
 
 @implementer(interfaces.IMulticastTransport)
@@ -531,3 +575,8 @@ class MulticastPort(MulticastMixin, Port):
                     else:
                         raise
         return skt
+
+    def _bindSocket(self):
+        bound = super()._bindSocket()
+        self.setTTL(1)
+        return bound
