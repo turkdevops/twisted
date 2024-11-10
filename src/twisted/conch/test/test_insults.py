@@ -6,6 +6,7 @@ import textwrap
 from typing import Optional, Type
 
 from constantly import ValueConstant, Values
+
 from twisted.conch.insults.insults import (
     BLINK,
     CS_ALTERNATE,

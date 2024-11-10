@@ -9,7 +9,6 @@ Twisted Python: Utilities and Enhancements for Python.
 from .deprecate import deprecatedModuleAttribute
 from .versions import Version
 
-
 deprecatedModuleAttribute(
     Version("Twisted", 17, 5, 0),
     "Please use hyperlink from PyPI instead.",
