@@ -8,7 +8,7 @@ Tests for implementations of L{IReactorUDP} and L{IReactorMulticast}.
 
 
 import os
-from socket import AF_INET
+from socket import AF_INET, if_nameindex
 from unittest import skipIf
 
 from twisted.internet import defer, error, interfaces, protocol, reactor, udp
@@ -787,6 +787,8 @@ class MulticastTestsIPv6(MulticastTests):
     interface: str = "::"  # "::1"
     clientAddress: str = "::1%lo0"  # "::1%lo0"
     multicastGroup: str = "ff03::1"  # "ff03::1"
-    alternateInterface: str | int = 1
+    alternateInterface: str | int = next(
+        (idxnm[0] for idxnm in if_nameindex() if idxnm[1].startswith("lo"))
+    )
     invalidGroup: str = "::1"
     expectedInterface: str | int = 0
