@@ -594,8 +594,8 @@ def checkMulticastGroups() -> tuple[bool, bool]:
             IP_ADD_MEMBERSHIP,
             inet_pton(AF_INET, "225.0.0.250") + inet_pton(AF_INET, "0.0.0.0"),
         )
-    except OSError:
-        ipv4Support = False
+    except OSError:  # pragma: no cover
+        ipv4Support = False  # pragma: no cover
     else:
         ipv4Support = True
     s.close()
@@ -607,8 +607,8 @@ def checkMulticastGroups() -> tuple[bool, bool]:
             IPV6_JOIN_GROUP,
             inet_pton(AF_INET6, "ff03::1") + inet_pton(AF_INET6, "::"),
         )
-    except OSError as e:
-        ipv6Support = False
+    except OSError as e:  # pragma: no cover
+        ipv6Support = False  # pragma: no cover
         print(e)
     else:
         ipv6Support = True
