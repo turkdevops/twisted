@@ -22,6 +22,7 @@ from twisted.internet.interfaces import (
 )
 from twisted.internet.task import deferLater
 from twisted.python import runtime
+from twisted.test.testutils import skipWithoutIPv6
 from twisted.trial.unittest import SkipTest, TestCase
 
 
@@ -784,6 +785,11 @@ class MulticastTests(TestCase):
         )
 
 
+@skipIf(
+    not interfaces.IReactorMulticast(reactor, None),
+    "This reactor does not support multicast",
+)
+@skipWithoutIPv6
 class MulticastTestsIPv6(MulticastTests):
     interface: str = "::"
     clientAddress: str = "::1"
