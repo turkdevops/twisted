@@ -9,7 +9,18 @@ Tests for implementations of L{IReactorUDP} and L{IReactorMulticast}.
 from __future__ import annotations
 
 import os
-from socket import AF_INET, if_nameindex
+from socket import (
+    AF_INET,
+    AF_INET6,
+    IP_ADD_MEMBERSHIP,
+    IPPROTO_IP,
+    IPPROTO_IPV6,
+    IPV6_JOIN_GROUP,
+    SOCK_DGRAM,
+    if_nameindex,
+    inet_pton,
+    socket,
+)
 from unittest import skipIf
 
 from twisted.internet import defer, error, interfaces, protocol, reactor, udp
@@ -574,10 +585,45 @@ class ReactorShutdownInteractionTests(TestCase):
         return finished
 
 
+def checkMulticastGroups() -> tuple[bool, bool]:
+    s = socket(AF_INET, SOCK_DGRAM)
+    s.bind(("0.0.0.0", 0))
+    try:
+        s.setsockopt(
+            IPPROTO_IP,
+            IP_ADD_MEMBERSHIP,
+            inet_pton(AF_INET, "225.0.0.250") + inet_pton(AF_INET, "0.0.0.0"),
+        )
+    except OSError:
+        ipv4Support = False
+    else:
+        ipv4Support = True
+    s.close()
+    s = socket(AF_INET6, SOCK_DGRAM)
+    s.bind(("::", 0))
+    try:
+        s.setsockopt(
+            IPPROTO_IPV6,
+            IPV6_JOIN_GROUP,
+            inet_pton(AF_INET6, "ff03::1") + inet_pton(AF_INET6, "::"),
+        )
+    except OSError as e:
+        ipv6Support = False
+        print(e)
+    else:
+        ipv6Support = True
+    s.close()
+    return ipv4Support, ipv6Support
+
+
+supportsIPv4, supportsIPv6 = checkMulticastGroups()
+
+
 @skipIf(
     not interfaces.IReactorMulticast(reactor, None),
     "This reactor does not support multicast",
 )
+@skipIf(not supportsIPv4, "The local stack does not enable IPv4 multicast.")
 class MulticastTests(TestCase):
     if (
         os.environ.get("INFRASTRUCTURE") == "AZUREPIPELINES"
@@ -790,6 +836,7 @@ class MulticastTests(TestCase):
     "This reactor does not support multicast",
 )
 @skipWithoutIPv6
+@skipIf(not supportsIPv6, "The local stack does not enable IPv6 multicast.")
 class MulticastTestsIPv6(MulticastTests):
     interface: str = "::"
     clientAddress: str = "::1"
