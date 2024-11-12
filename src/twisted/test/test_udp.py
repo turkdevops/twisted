@@ -6,6 +6,7 @@
 Tests for implementations of L{IReactorUDP} and L{IReactorMulticast}.
 """
 
+from __future__ import annotations
 
 import os
 from socket import AF_INET, if_nameindex
