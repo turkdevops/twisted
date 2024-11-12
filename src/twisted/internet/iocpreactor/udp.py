@@ -11,7 +11,7 @@ import errno
 import socket
 import struct
 import warnings
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from zope.interface import implementer
 
@@ -25,9 +25,11 @@ from twisted.internet.iocpreactor.const import (
     ERROR_PORT_UNREACHABLE,
 )
 from twisted.internet.iocpreactor.interfaces import IReadWriteHandle
-from twisted.internet.iocpreactor.reactor import IOCPReactor
 from twisted.internet.protocol import AbstractDatagramProtocol
 from twisted.python import log
+
+if TYPE_CHECKING:
+    from twisted.internet.iocpreactor.reactor import IOCPReactor
 
 
 @implementer(
