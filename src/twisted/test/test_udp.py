@@ -639,6 +639,7 @@ class MulticastTests(TestCase):
     clientAddress: str = "127.0.0.1"  # "::1%lo0"
     multicastGroup: str = "225.0.0.250"  # "ff03::1"
     alternateInterface: str | int = "127.0.0.1"
+    interfaceSynonym: str | int = "localhost"
     invalidGroup: str = "127.0.0.1"
 
     def setUp(self):
@@ -709,7 +710,7 @@ class MulticastTests(TestCase):
         )
 
         await self.server.transport.setOutgoingInterface(self.alternateInterface)
-        await self.client.transport.setOutgoingInterface(self.alternateInterface)
+        await self.client.transport.setOutgoingInterface(self.interfaceSynonym)
 
         self.assertEqual(
             self.client.transport.getOutgoingInterface(),
@@ -844,5 +845,6 @@ class MulticastTestsIPv6(MulticastTests):
     alternateInterface: str | int = next(
         (idxnm[0] for idxnm in if_nameindex() if idxnm[1].startswith("lo"))
     )
+    interfaceSynonym: str | int = alternateInterface
     invalidGroup: str = "::1"
     expectedInterface: str | int = 0
