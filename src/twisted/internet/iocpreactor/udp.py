@@ -5,6 +5,8 @@
 UDP support for IOCP reactor
 """
 
+from __future__ import annotations
+
 import errno
 import socket
 import struct
@@ -23,6 +25,8 @@ from twisted.internet.iocpreactor.const import (
     ERROR_PORT_UNREACHABLE,
 )
 from twisted.internet.iocpreactor.interfaces import IReadWriteHandle
+from twisted.internet.iocpreactor.reactor import IOCPReactor
+from twisted.internet.protocol import AbstractDatagramProtocol
 from twisted.python import log
 
 
@@ -40,6 +44,7 @@ class Port(abstract.FileHandle):
         whether this port is listening on an IPv4 address or an IPv6 address.
     """
 
+    reactor: IOCPReactor
     addressFamily = socket.AF_INET
     socketType = socket.SOCK_DGRAM
     dynamicReadBuffers = False
@@ -48,7 +53,14 @@ class Port(abstract.FileHandle):
     # value when we are actually listening.
     _realPortNumber: Optional[int] = None
 
-    def __init__(self, port, proto, interface="", maxPacketSize=8192, reactor=None):
+    def __init__(
+        self,
+        port: int,
+        proto: AbstractDatagramProtocol,
+        interface: str = "",
+        maxPacketSize: int = 8192,
+        reactor: IOCPReactor | None = None,
+    ) -> None:
         """
         Initialize with a numeric port to listen on.
         """
@@ -103,7 +115,7 @@ class Port(abstract.FileHandle):
         self._bindSocket()
         self._connectToProtocol()
 
-    def createSocket(self):
+    def createSocket(self) -> socket.socket:
         return self.reactor.createSocket(self.addressFamily, self.socketType)
 
     def _bindSocket(self):
@@ -348,17 +360,17 @@ class MulticastPort(MulticastMixin, Port):
 
     def __init__(
         self,
-        port,
-        proto,
-        interface="",
-        maxPacketSize=8192,
-        reactor=None,
-        listenMultiple=False,
-    ):
+        port: int,
+        proto: AbstractDatagramProtocol,
+        interface: str = "",
+        maxPacketSize: int = 8192,
+        reactor: IOCPReactor | None = None,
+        listenMultiple: bool = False,
+    ) -> None:
         Port.__init__(self, port, proto, interface, maxPacketSize, reactor)
         self.listenMultiple = listenMultiple
 
-    def createSocket(self):
+    def createSocket(self) -> socket.socket:
         skt = Port.createSocket(self)
         if self.listenMultiple:
             skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

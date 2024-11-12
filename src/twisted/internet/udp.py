@@ -24,6 +24,8 @@ from typing import Optional
 from zope.interface import implementer
 
 from twisted.internet._multicast import MulticastMixin
+from twisted.internet.interfaces import IReactorMulticast
+from twisted.internet.protocol import AbstractDatagramProtocol
 from twisted.python.runtime import platformType
 
 if platformType == "win32":
@@ -448,20 +450,20 @@ class MulticastPort(MulticastMixin, Port):
 
     def __init__(
         self,
-        port,
-        proto,
-        interface="",
-        maxPacketSize=8192,
-        reactor=None,
-        listenMultiple=False,
-    ):
+        port: int,
+        proto: AbstractDatagramProtocol,
+        interface: str = "",
+        maxPacketSize: int = 8192,
+        reactor: IReactorMulticast | None = None,
+        listenMultiple: bool = False,
+    ) -> None:
         """
         @see: L{twisted.internet.interfaces.IReactorMulticast.listenMulticast}
         """
         Port.__init__(self, port, proto, interface, maxPacketSize, reactor)
         self.listenMultiple = listenMultiple
 
-    def createInternetSocket(self):
+    def createInternetSocket(self) -> socket.socket:
         skt = Port.createInternetSocket(self)
         if self.listenMultiple:
             skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
