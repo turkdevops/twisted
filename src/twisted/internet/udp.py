@@ -14,7 +14,7 @@ Please do not use this module directly.
 @var _sockErrReadRefuse: list of symbolic error constants (from the C{errno}
     module) representing socket errors that indicate connection refused.
 """
-
+from __future__ import annotations
 
 # System Imports
 import socket
