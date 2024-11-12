@@ -926,10 +926,10 @@ class IReactorMulticast(Interface):
     def listenMulticast(
         port: int,
         protocol: "DatagramProtocol",
-        interface: str,
-        maxPacketSize: int,
-        listenMultiple: bool,
-    ) -> "IListeningPort":
+        interface: str = "",
+        maxPacketSize: int = 8192,
+        listenMultiple: bool = False,
+    ) -> IMulticastTransport:
         """
         Connects a given
         L{DatagramProtocol<twisted.internet.protocol.DatagramProtocol>} to the
@@ -2572,7 +2572,7 @@ class IUNIXDatagramConnectedTransport(Interface):
         """
 
 
-class IMulticastTransport(Interface):
+class IMulticastTransport(IListeningPort):
     """
     Additional functionality for multicast UDP.
     """
@@ -2609,7 +2609,7 @@ class IMulticastTransport(Interface):
         Set time to live on multicast packets.
         """
 
-    def joinGroup(addr: str, interface: str) -> "Deferred[None]":
+    def joinGroup(addr: str, interface: str = "") -> "Deferred[None]":
         """
         Join a multicast group. Returns L{Deferred} of success or failure.
 
@@ -2617,7 +2617,7 @@ class IMulticastTransport(Interface):
         L{error.MulticastJoinError}.
         """
 
-    def leaveGroup(addr: str, interface: str) -> "Deferred[None]":
+    def leaveGroup(addr: str, interface: str = "") -> "Deferred[None]":
         """
         Leave multicast group, return L{Deferred} of success.
         """

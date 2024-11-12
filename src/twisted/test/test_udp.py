@@ -11,7 +11,10 @@ import os
 from unittest import skipIf
 
 from twisted.internet import defer, error, interfaces, protocol, reactor, udp
+from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.defer import Deferred, gatherResults, maybeDeferred
+from twisted.internet.interfaces import IReactorMulticast, IReactorTime, IUDPTransport
+from twisted.internet.task import deferLater
 from twisted.python import runtime
 from twisted.trial.unittest import TestCase
 
@@ -36,8 +39,9 @@ class Mixin:
 
 
 class Server(Mixin, protocol.DatagramProtocol):
-    packetReceived = None
+    packetReceived: Deferred[None] | None = None
     refused = 0
+    transport: IUDPTransport
 
     def datagramReceived(self, data, addr):
         self.packets.append((data, addr))
@@ -577,14 +581,20 @@ class MulticastTests(TestCase):
     if not interfaces.IReactorMulticast(reactor, None):
         skip = "This reactor does not support multicast"
 
+    interface: str = "0.0.0.0"  # "::1"
+    clientAddress: str = "127.0.0.1"  # "::1%lo0"
+    multicastGroup: str = "225.0.0.250"  # "ff03::1"
+    alternateInterface: str = "127.0.0.1"  # "::1"
+    invalidGroup: str = "127.0.0.1"
+
     def setUp(self):
         self.server = Server()
         self.client = Client()
         # multicast won't work if we listen over loopback, apparently
-        self.port1 = reactor.listenMulticast(0, self.server, "::1")
-        self.port2 = reactor.listenMulticast(0, self.client, "::1")
+        self.port1 = reactor.listenMulticast(0, self.server, self.interface)
+        self.port2 = reactor.listenMulticast(0, self.client, self.interface)
         self.client.transport.connect(
-            "::1",
+            self.clientAddress,
             self.server.transport.getHost().port,
         )
 
@@ -605,83 +615,62 @@ class MulticastTests(TestCase):
         checkttl(self.client)
         checkttl(self.server)
 
-    def test_loopback(self):
+    async def test_loopback(self) -> None:
         """
         Test that after loopback mode has been set, multicast packets are
         delivered to their sender.
         """
+        group = self.multicastGroup
         self.assertEqual(self.server.transport.getLoopbackMode(), 1)
         addr = self.server.transport.getHost()
-        joined = self.server.transport.joinGroup("225.0.0.250")
 
-        def cbJoined(ignored):
-            d = self.server.packetReceived = Deferred()
-            self.server.transport.write(b"hello", ("225.0.0.250", addr.port))
-            return d
+        await self.server.transport.joinGroup(group)
+        self.server.packetReceived = Deferred()
+        self.server.transport.write(b"hello", (group, addr.port))
+        await self.server.packetReceived
 
-        joined.addCallback(cbJoined)
+        self.assertEqual(len(self.server.packets), 1)
+        self.server.transport.setLoopbackMode(0)
+        self.assertEqual(self.server.transport.getLoopbackMode(), 0)
+        self.server.transport.write(b"hello", (group, addr.port))
 
-        def cbPacket(ignored):
-            self.assertEqual(len(self.server.packets), 1)
-            self.server.transport.setLoopbackMode(0)
-            self.assertEqual(self.server.transport.getLoopbackMode(), 0)
-            self.server.transport.write(b"hello", ("225.0.0.250", addr.port))
-
-            # This is fairly lame.
-            d = Deferred()
-            reactor.callLater(0, d.callback, None)
-            return d
-
-        joined.addCallback(cbPacket)
-
-        def cbNoPacket(ignored):
-            self.assertEqual(len(self.server.packets), 1)
-
-        joined.addCallback(cbNoPacket)
-
-        return joined
+        # This is a recipe for a flaky test, but we need to let the reactor
+        # spin a bit to let the packet through.
+        await deferLater(IReactorTime(reactor), 0)
+        self.assertEqual(len(self.server.packets), 1)
 
     def test_interface(self):
         """
         Test C{getOutgoingInterface} and C{setOutgoingInterface}.
         """
-        self.assertEqual(self.client.transport.getOutgoingInterface(), "0.0.0.0")
-        self.assertEqual(self.server.transport.getOutgoingInterface(), "0.0.0.0")
+        self.assertEqual(self.client.transport.getOutgoingInterface(), self.interface)
+        self.assertEqual(self.server.transport.getOutgoingInterface(), self.interface)
 
-        d1 = self.client.transport.setOutgoingInterface("127.0.0.1")
-        d2 = self.server.transport.setOutgoingInterface("127.0.0.1")
+        d1 = self.client.transport.setOutgoingInterface(self.alternateInterface)
+        d2 = self.server.transport.setOutgoingInterface(self.alternateInterface)
         result = gatherResults([d1, d2])
 
         def cbInterfaces(ignored):
-            self.assertEqual(self.client.transport.getOutgoingInterface(), "127.0.0.1")
-            self.assertEqual(self.server.transport.getOutgoingInterface(), "127.0.0.1")
+            self.assertEqual(
+                self.client.transport.getOutgoingInterface(),
+                self.alternateInterface,
+            )
+            self.assertEqual(
+                self.server.transport.getOutgoingInterface(),
+                self.alternateInterface,
+            )
 
         result.addCallback(cbInterfaces)
         return result
 
-    def test_joinLeave(self):
+    async def test_joinLeave(self) -> None:
         """
         Test that multicast a group can be joined and left.
         """
-        group = "ff01::0"
-        d = self.client.transport.joinGroup(group, "::1")
-
-        def clientJoined(ignored):
-            return self.client.transport.leaveGroup(group, "::1")
-
-        d.addCallback(clientJoined)
-
-        def clientLeft(ignored):
-            return self.server.transport.joinGroup(group, "::1")
-
-        d.addCallback(clientLeft)
-
-        def serverJoined(ignored):
-            return self.server.transport.leaveGroup(group, "::1")
-
-        d.addCallback(serverJoined)
-
-        return d
+        await self.client.transport.joinGroup(self.multicastGroup)
+        await self.client.transport.leaveGroup(self.multicastGroup)
+        await self.server.transport.joinGroup(self.multicastGroup)
+        await self.server.transport.leaveGroup(self.multicastGroup)
 
     # FIXME: https://twistedmatrix.com/trac/ticket/7780
     @skipIf(
@@ -695,7 +684,7 @@ class MulticastTests(TestCase):
         """
         # 127.0.0.1 is not a multicast address, so joining it should fail.
         return self.assertFailure(
-            self.client.transport.joinGroup("127.0.0.1"), error.MulticastJoinError
+            self.client.transport.joinGroup(self.invalidGroup), error.MulticastJoinError
         )
 
     def test_multicast(self):
@@ -707,11 +696,11 @@ class MulticastTests(TestCase):
         p = reactor.listenMulticast(0, c)
         addr = self.server.transport.getHost()
 
-        joined = self.server.transport.joinGroup("225.0.0.250")
+        joined = self.server.transport.joinGroup(self.multicastGroup)
 
         def cbJoined(ignored):
             d = self.server.packetReceived = Deferred()
-            c.transport.write(b"hello world", ("225.0.0.250", addr.port))
+            c.transport.write(b"hello world", (self.multicastGroup, addr.port))
             return d
 
         joined.addCallback(cbJoined)
@@ -736,51 +725,51 @@ class MulticastTests(TestCase):
         "processes can listen, but not multiple sockets "
         "in same process?",
     )
-    def test_multiListen(self):
+    async def test_multiListen(self) -> None:
         """
         Test that multiple sockets can listen on the same multicast port and
         that they both receive multicast messages directed to that address.
         """
         firstClient = Server()
-        firstPort = reactor.listenMulticast(0, firstClient, listenMultiple=True)
-
-        portno = firstPort.getHost().port
+        mreactor = IReactorMulticast(reactor)
+        firstPort = mreactor.listenMulticast(0, firstClient, listenMultiple=True)
+        fpAddr = firstPort.getHost()
+        assert isinstance(fpAddr, (IPv4Address, IPv6Address))
+        portno = fpAddr.port
 
         secondClient = Server()
-        secondPort = reactor.listenMulticast(portno, secondClient, listenMultiple=True)
+        secondPort = mreactor.listenMulticast(portno, secondClient, listenMultiple=True)
 
-        theGroup = "225.0.0.250"
-        joined = gatherResults(
+        await gatherResults(
             [
-                self.server.transport.joinGroup(theGroup),
-                firstPort.joinGroup(theGroup),
-                secondPort.joinGroup(theGroup),
+                self.server.transport.joinGroup(self.multicastGroup),
+                firstPort.joinGroup(self.multicastGroup),
+                secondPort.joinGroup(self.multicastGroup),
             ]
         )
 
-        def serverJoined(ignored):
-            d1 = firstClient.packetReceived = Deferred()
-            d2 = secondClient.packetReceived = Deferred()
-            firstClient.transport.write(b"hello world", (theGroup, portno))
-            return gatherResults([d1, d2])
+        d1: Deferred[None]
+        d1 = firstClient.packetReceived = Deferred()
+        d2: Deferred[None]
+        d2 = secondClient.packetReceived = Deferred()
 
-        joined.addCallback(serverJoined)
+        firstClient.transport.write(b"hello world", (self.multicastGroup, portno))
+        await gatherResults([d1, d2])
 
-        def gotPackets(ignored):
-            self.assertEqual(firstClient.packets[0][0], b"hello world")
-            self.assertEqual(secondClient.packets[0][0], b"hello world")
+        self.assertEqual(firstClient.packets[0][0], b"hello world")
+        self.assertEqual(secondClient.packets[0][0], b"hello world")
 
-        joined.addCallback(gotPackets)
+        await gatherResults(
+            [
+                maybeDeferred(firstPort.stopListening),
+                maybeDeferred(secondPort.stopListening),
+            ]
+        )
 
-        def cleanup(passthrough):
-            result = gatherResults(
-                [
-                    maybeDeferred(firstPort.stopListening),
-                    maybeDeferred(secondPort.stopListening),
-                ]
-            )
-            result.addCallback(lambda ign: passthrough)
-            return result
 
-        joined.addBoth(cleanup)
-        return joined
+class MulticastTestsIPv6(MulticastTests):
+    interface: str = "::"  # "::1"
+    clientAddress: str = "::1%lo0"  # "::1%lo0"
+    multicastGroup: str = "ff03::1"  # "ff03::1"
+    alternateInterface: str = "::1"  # "::1"
+    invalidGroup: str = "::1"

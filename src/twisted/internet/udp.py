@@ -482,6 +482,22 @@ class MulticastMixin:
             else socket.IPV6_MULTICAST_IF
         )
 
+    @property
+    def _joingroup(self) -> int:
+        return (
+            socket.IP_ADD_MEMBERSHIP
+            if self.addressFamily == socket.AF_INET
+            else socket.IPV6_JOIN_GROUP
+        )
+
+    @property
+    def _leavegroup(self) -> int:
+        return (
+            socket.IP_DROP_MEMBERSHIP
+            if self.addressFamily == socket.AF_INET
+            else socket.IPV6_LEAVE_GROUP
+        )
+
     def getOutgoingInterface(self):
         i = self.socket.getsockopt(self._ipproto, self._multiif)
         return socket.inet_ntoa(struct.pack("@i", i))
@@ -510,7 +526,9 @@ class MulticastMixin:
         self.socket.setsockopt(self._ipproto, socket.IP_MULTICAST_TTL, ttl)
 
     def _joinleave(self, addr: str, interface: str, join: bool) -> Deferred[None]:
-        cmd = socket.IP_ADD_MEMBERSHIP if join else socket.IP_DROP_MEMBERSHIP
+        cmd = self._joingroup if join else self._leavegroup
+        if not interface:
+            interface = "0.0.0.0" if self.addressFamily == socket.AF_INET else "::"
 
         async def impl() -> None:
             resaddr = await _maybeResolve(self.reactor, addr)
@@ -578,5 +596,4 @@ class MulticastPort(MulticastMixin, Port):
 
     def _bindSocket(self):
         bound = super()._bindSocket()
-        self.setTTL(1)
         return bound
