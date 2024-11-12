@@ -8,7 +8,7 @@ Standard implementations of Twisted protocol-related interfaces.
 Start here if you are looking to write a new protocol implementation for
 Twisted.  The Protocol class contains some introductory material.
 """
-
+from __future__ import annotations
 
 import random
 from typing import Any, Callable, Optional
