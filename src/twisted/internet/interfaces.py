@@ -2572,21 +2572,25 @@ class IUNIXDatagramConnectedTransport(Interface):
         """
 
 
-class IMulticastTransport(IListeningPort):
+class IMulticastTransport(IUDPTransport):
     """
     Additional functionality for multicast UDP.
     """
 
-    def getOutgoingInterface() -> str:
+    def getOutgoingInterface() -> str | int:
         """
         Return interface of outgoing multicast packets.
         """
 
-    def setOutgoingInterface(addr: str) -> None:
+    def setOutgoingInterface(addr: str | int) -> Deferred[int]:
         """
         Set interface for outgoing multicast packets.
 
-        Returns Deferred of success.
+        @note: For IPv4 multicast sockets, the address must be a hostname or IP
+            address.  For IPv6 multicast sockets, the address must be an
+            interface index, as described in L{socket.if_nameindex}.
+
+        @returns: Deferred of (1: success, 0: failure).
         """
 
     def getLoopbackMode() -> bool:

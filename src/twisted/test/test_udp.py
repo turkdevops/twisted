@@ -8,15 +8,20 @@ Tests for implementations of L{IReactorUDP} and L{IReactorMulticast}.
 
 
 import os
+from socket import AF_INET
 from unittest import skipIf
 
 from twisted.internet import defer, error, interfaces, protocol, reactor, udp
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.defer import Deferred, gatherResults, maybeDeferred
-from twisted.internet.interfaces import IReactorMulticast, IReactorTime, IUDPTransport
+from twisted.internet.interfaces import (
+    IMulticastTransport,
+    IReactorMulticast,
+    IReactorTime,
+)
 from twisted.internet.task import deferLater
 from twisted.python import runtime
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import SkipTest, TestCase
 
 
 class Mixin:
@@ -41,7 +46,7 @@ class Mixin:
 class Server(Mixin, protocol.DatagramProtocol):
     packetReceived: Deferred[None] | None = None
     refused = 0
-    transport: IUDPTransport
+    transport: IMulticastTransport
 
     def datagramReceived(self, data, addr):
         self.packets.append((data, addr))
@@ -582,9 +587,10 @@ class MulticastTests(TestCase):
         skip = "This reactor does not support multicast"
 
     interface: str = "0.0.0.0"  # "::1"
+    expectedInterface: str | int = "0.0.0.0"
     clientAddress: str = "127.0.0.1"  # "::1%lo0"
     multicastGroup: str = "225.0.0.250"  # "ff03::1"
-    alternateInterface: str = "127.0.0.1"  # "::1"
+    alternateInterface: str | int = "127.0.0.1"
     invalidGroup: str = "127.0.0.1"
 
     def setUp(self):
@@ -606,8 +612,12 @@ class MulticastTests(TestCase):
             ]
         )
 
-    def testTTL(self):
-        def checkttl(o):
+    def testTTL(self) -> None:
+        if self.server.transport.addressFamily != AF_INET:
+            raise SkipTest("only IPv4 multicast has TTLs, IPv6 has hops")
+
+        def checkttl(o: Server | Client) -> None:
+            assert IMulticastTransport.providedBy(o.transport)
             self.assertEqual(o.transport.getTTL(), 1)
             o.transport.setTTL(2)
             self.assertEqual(o.transport.getTTL(), 2)
@@ -639,29 +649,28 @@ class MulticastTests(TestCase):
         await deferLater(IReactorTime(reactor), 0)
         self.assertEqual(len(self.server.packets), 1)
 
-    def test_interface(self):
+    async def test_interface(self) -> None:
         """
         Test C{getOutgoingInterface} and C{setOutgoingInterface}.
         """
-        self.assertEqual(self.client.transport.getOutgoingInterface(), self.interface)
-        self.assertEqual(self.server.transport.getOutgoingInterface(), self.interface)
+        self.assertEqual(
+            self.client.transport.getOutgoingInterface(), self.expectedInterface
+        )
+        self.assertEqual(
+            self.server.transport.getOutgoingInterface(), self.expectedInterface
+        )
 
-        d1 = self.client.transport.setOutgoingInterface(self.alternateInterface)
-        d2 = self.server.transport.setOutgoingInterface(self.alternateInterface)
-        result = gatherResults([d1, d2])
+        await self.server.transport.setOutgoingInterface(self.alternateInterface)
+        await self.client.transport.setOutgoingInterface(self.alternateInterface)
 
-        def cbInterfaces(ignored):
-            self.assertEqual(
-                self.client.transport.getOutgoingInterface(),
-                self.alternateInterface,
-            )
-            self.assertEqual(
-                self.server.transport.getOutgoingInterface(),
-                self.alternateInterface,
-            )
-
-        result.addCallback(cbInterfaces)
-        return result
+        self.assertEqual(
+            self.client.transport.getOutgoingInterface(),
+            self.alternateInterface,
+        )
+        self.assertEqual(
+            self.server.transport.getOutgoingInterface(),
+            self.alternateInterface,
+        )
 
     async def test_joinLeave(self) -> None:
         """
@@ -693,7 +702,7 @@ class MulticastTests(TestCase):
         received from it.
         """
         c = Server()
-        p = reactor.listenMulticast(0, c)
+        p = reactor.listenMulticast(0, c, self.interface)
         addr = self.server.transport.getHost()
 
         joined = self.server.transport.joinGroup(self.multicastGroup)
@@ -732,13 +741,20 @@ class MulticastTests(TestCase):
         """
         firstClient = Server()
         mreactor = IReactorMulticast(reactor)
-        firstPort = mreactor.listenMulticast(0, firstClient, listenMultiple=True)
+        firstPort = mreactor.listenMulticast(
+            0, firstClient, listenMultiple=True, interface=self.interface
+        )
         fpAddr = firstPort.getHost()
         assert isinstance(fpAddr, (IPv4Address, IPv6Address))
         portno = fpAddr.port
 
         secondClient = Server()
-        secondPort = mreactor.listenMulticast(portno, secondClient, listenMultiple=True)
+        secondPort = mreactor.listenMulticast(
+            portno,
+            secondClient,
+            listenMultiple=True,
+            interface=self.interface,
+        )
 
         await gatherResults(
             [
@@ -771,5 +787,6 @@ class MulticastTestsIPv6(MulticastTests):
     interface: str = "::"  # "::1"
     clientAddress: str = "::1%lo0"  # "::1%lo0"
     multicastGroup: str = "ff03::1"  # "ff03::1"
-    alternateInterface: str = "::1"  # "::1"
+    alternateInterface: str | int = 1
     invalidGroup: str = "::1"
+    expectedInterface: str | int = 0

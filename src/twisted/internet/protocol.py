@@ -16,7 +16,12 @@ from typing import Any, Callable, Optional
 from zope.interface import implementer
 
 from twisted.internet import defer, error, interfaces
-from twisted.internet.interfaces import IAddress, ITransport, IUDPTransport
+from twisted.internet.interfaces import (
+    IAddress,
+    IMulticastTransport,
+    ITransport,
+    IUDPTransport,
+)
 from twisted.logger import _loggerFor
 from twisted.python import components, failure, log
 
@@ -686,7 +691,7 @@ class AbstractDatagramProtocol:
     UDP.
     """
 
-    transport: IUDPTransport | None = None
+    transport: IUDPTransport | IMulticastTransport | None = None
     numPorts = 0
     noisy = True
 
