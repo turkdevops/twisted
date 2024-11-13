@@ -1349,8 +1349,23 @@ class IReactorCore(Interface):
 
     def resolve(name: str, timeout: Sequence[int] = (1, 3, 11, 45)) -> "Deferred[str]":
         """
-        Return a L{twisted.internet.defer.Deferred} that will resolve a
-        hostname.
+        Asynchronously resolve a hostname to a single IPv4 address.
+
+        @note: Rather than calling this API directly, you probably want to use
+            L{twisted.internet.endpoints.HostnameEndpoint} to connect to a
+            hostname.  If you do want to resolve a hostname without connecting
+            to it, see L{IReactorPluggableNameResolver} and
+            L{IHostnameResolver} so that you can receive multiple results and
+            IPv6 addresses.
+
+        @param name: The hostname to resolve.
+
+        @param timeout: A sequence of timeouts, meant to mirror the sequence of
+            timeouts used for each hop in recursive queries.  Note that
+            different implementations of the resolver backend may not honor
+            this timeout as such, or at all; if the underlying platform API
+            supports it, implementations make a best-effort attempt to cancel
+            the underlying resolution if the sum of these timeouts elapses.
         """
 
     def run() -> None:
