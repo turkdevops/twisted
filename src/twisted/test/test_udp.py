@@ -17,6 +17,7 @@ from socket import (
     IPPROTO_IPV6,
     IPV6_JOIN_GROUP,
     SOCK_DGRAM,
+    AddressFamily,
     if_nameindex,
     inet_pton,
     socket,
@@ -586,45 +587,39 @@ class ReactorShutdownInteractionTests(TestCase):
         return finished
 
 
-def checkMulticastGroups() -> tuple[bool, bool]:
-    s = socket(AF_INET, SOCK_DGRAM)
-    s.bind(("0.0.0.0", 0))
+def checkMulticastAvailability(
+    af: AddressFamily, ipproto: int, join: int, group: str, bindto: str
+) -> bool:
+    """
+    Bind a socket to the given network interface and attempt to join a
+    multicast group with the given address family.  This is used to determine
+    whether the local networking stack configuration allows for multicast
+    within the given address family.
+    """
+    s = socket(af, SOCK_DGRAM)
+    s.bind((bindto, 0))
+    packgroup = inet_pton(af, group)
+    packif = inet_pton(af, bindto)
     try:
-        s.setsockopt(
-            IPPROTO_IP,
-            IP_ADD_MEMBERSHIP,
-            inet_pton(AF_INET, "225.0.0.250") + inet_pton(AF_INET, "0.0.0.0"),
-        )
-    except OSError:  # pragma: no cover
-        ipv4Support = False  # pragma: no cover
+        s.setsockopt(ipproto, join, packgroup + packif)
+    except OSError:
+        return False
     else:
-        ipv4Support = True
-    s.close()
-    s = socket(AF_INET6, SOCK_DGRAM)
-    s.bind(("::", 0))
-    try:
-        s.setsockopt(
-            IPPROTO_IPV6,
-            IPV6_JOIN_GROUP,
-            inet_pton(AF_INET6, "ff03::1") + inet_pton(AF_INET6, "::"),
-        )
-    except OSError as e:  # pragma: no cover
-        ipv6Support = False  # pragma: no cover
-        print(e)
-    else:
-        ipv6Support = True
-    s.close()
-    return ipv4Support, ipv6Support
-
-
-supportsIPv4, supportsIPv6 = checkMulticastGroups()
+        return True
+    finally:
+        s.close()
 
 
 @skipIf(
     not interfaces.IReactorMulticast(reactor, None),
     "This reactor does not support multicast",
 )
-@skipIf(not supportsIPv4, "The local stack does not enable IPv4 multicast.")
+@skipIf(
+    not checkMulticastAvailability(
+        AF_INET, IPPROTO_IP, IP_ADD_MEMBERSHIP, "225.0.0.250", "0.0.0.0"
+    ),
+    "The local networking stack does not enable IPv4 multicast.",
+)
 class MulticastTests(TestCase):
     if (
         os.environ.get("INFRASTRUCTURE") == "AZUREPIPELINES"
@@ -849,7 +844,12 @@ class MulticastTests(TestCase):
     "This reactor does not support multicast",
 )
 @skipWithoutIPv6
-@skipIf(not supportsIPv6, "The local stack does not enable IPv6 multicast.")
+@skipIf(
+    not checkMulticastAvailability(
+        AF_INET6, IPPROTO_IPV6, IPV6_JOIN_GROUP, "ff03::1", "::"
+    ),
+    "The local stack does not enable IPv6 multicast.",
+)
 class MulticastTestsIPv6(MulticastTests):
     interface: str = "::"
     clientAddress: str = "::1"
