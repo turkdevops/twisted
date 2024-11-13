@@ -1,4 +1,6 @@
 # -*- test-case-name: twisted.test.test_udp -*-
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 from __future__ import annotations
 
