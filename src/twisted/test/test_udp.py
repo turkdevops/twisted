@@ -621,6 +621,13 @@ def checkMulticastAvailability(
     "The local networking stack does not enable IPv4 multicast.",
 )
 class MulticastTests(TestCase):
+    """
+    Tests for sending and receiving multicast datagrams.  (This suite supports
+    IPv4, see below for IPv6.)
+    """
+
+    # Define test addresses as class attributes so they may be parameterized
+    # for IPv6 below.
     interface: str = "0.0.0.0"
     expectedInterface: str | int = "0.0.0.0"
     clientAddress: str = "127.0.0.1"
@@ -842,6 +849,12 @@ class MulticastTests(TestCase):
     "The local stack does not enable IPv6 multicast.",
 )
 class MulticastTestsIPv6(MulticastTests):
+    """
+    Tests for sending and receiving IPv6 multicast datagrams.
+    """
+
+    # Specifiy relevant IPv6 literals and values to override the IPv4 values in
+    # the superclass; all of these attributes are defined above.
     interface: str = "::"
     clientAddress: str = "::1"
     multicastGroup: str = "ff03::1"
