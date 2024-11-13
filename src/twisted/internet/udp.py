@@ -477,7 +477,3 @@ class MulticastPort(MulticastMixin, Port):
                     else:
                         raise
         return skt
-
-    def _bindSocket(self):
-        bound = super()._bindSocket()
-        return bound
