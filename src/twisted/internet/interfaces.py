@@ -935,12 +935,26 @@ class IReactorMulticast(Interface):
         L{DatagramProtocol<twisted.internet.protocol.DatagramProtocol>} to the
         given numeric UDP port.
 
-        @param listenMultiple: If set to True, allows multiple sockets to
-            bind to the same address and port number at the same time.
+        @param port: The port number to bind to.
 
-        @returns: An object which provides L{IListeningPort}.
+        @param protocol: the datagram receiver that will receive multicast
+            packets sent to the given interface and port.
 
-        @see: L{twisted.internet.interfaces.IMulticastTransport}
+        @param interface: The IP address literal of the network interface to
+            bind to.  By default, this will be C{"0.0.0.0"}, i.e. all IPv4
+            interfaces.  Note that the format of this literal determines the
+            address family of the resulting multicast transport: passing an
+            IPv6 literal, such as C{"::"}, will result in an IPv6 multicast
+            transport.
+
+        @param maxPacketSize: The maximum packet size to accept.
+
+        @param listenMultiple: If set to True, allows multiple sockets to bind
+            to the same address and port number at the same time.
+
+        @returns: An L{IMulticastTransport} that can send multicast traffic to
+            C{interface}.
+
         @see: U{http://twistedmatrix.com/documents/current/core/howto/udp.html}
         """
 
