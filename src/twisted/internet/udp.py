@@ -464,6 +464,10 @@ class MulticastPort(MulticastMixin, Port):
         self.listenMultiple = listenMultiple
 
     def createInternetSocket(self) -> socket.socket:
+        """
+        Override L{Port.createInternetSocket} to configure the socket to honor
+        the C{listenMultiple} argument to L{IReactorMulticast.listenMultiple}.
+        """
         skt = Port.createInternetSocket(self)
         if self.listenMultiple:
             skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
