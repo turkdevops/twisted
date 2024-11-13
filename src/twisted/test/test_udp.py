@@ -26,6 +26,7 @@ from unittest import skipIf
 from twisted.internet import defer, error, interfaces, protocol, reactor, udp
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.defer import Deferred, gatherResults, maybeDeferred
+from twisted.internet.error import MulticastJoinError
 from twisted.internet.interfaces import (
     IMulticastTransport,
     IReactorMulticast,
@@ -634,13 +635,14 @@ class MulticastTests(TestCase):
     if not interfaces.IReactorMulticast(reactor, None):
         skip = "This reactor does not support multicast"
 
-    interface: str = "0.0.0.0"  # "::1"
+    interface: str = "0.0.0.0"
     expectedInterface: str | int = "0.0.0.0"
-    clientAddress: str = "127.0.0.1"  # "::1%lo0"
-    multicastGroup: str = "225.0.0.250"  # "ff03::1"
+    clientAddress: str = "127.0.0.1"
+    multicastGroup: str = "225.0.0.250"
     alternateInterface: str | int = "127.0.0.1"
     interfaceSynonym: str | int = "localhost"
     invalidGroup: str = "127.0.0.1"
+    wrongAddressFamily: str = "::1"
 
     def setUp(self):
         self.server = Server()
@@ -697,6 +699,16 @@ class MulticastTests(TestCase):
         # spin a bit to let the packet through.
         await deferLater(IReactorTime(reactor), 0)
         self.assertEqual(len(self.server.packets), 1)
+
+    async def test_wrongFamilyInterfaceJoin(self) -> None:
+        """
+        A sensible error will be reported when using the wrong address family
+        literal for the 'interface' argument to 'joinGroup'.
+        """
+        with self.assertRaises(MulticastJoinError):
+            await self.server.transport.joinGroup(
+                self.multicastGroup, interface=self.wrongAddressFamily
+            )
 
     async def test_interface(self) -> None:
         """
@@ -848,3 +860,4 @@ class MulticastTestsIPv6(MulticastTests):
     interfaceSynonym: str | int = alternateInterface
     invalidGroup: str = "::1"
     expectedInterface: str | int = 0
+    wrongAddressFamily: str = "127.0.0.1"

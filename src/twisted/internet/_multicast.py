@@ -18,12 +18,6 @@ def _maybeResolve(reactor: IReactorCore, addr: str) -> Deferred[str]:
     return reactor.resolve(addr)
 
 
-def _addrpack(addr: str) -> bytes:
-    return socket.inet_pton(
-        socket.AF_INET if isIPAddress(addr) else socket.AF_INET6, addr
-    )
-
-
 class MulticastMixin:
     """
     Implement multicast functionality.
@@ -32,6 +26,18 @@ class MulticastMixin:
     addressFamily: socket.AddressFamily
     reactor: Any
     socket: socket.socket
+
+    def _addrpack(self, addr: str) -> bytes:
+        """
+        Pack an IP address literal into bytes, according to the address family
+        of this transport.
+        """
+        try:
+            return socket.inet_pton(self.addressFamily, addr)
+        except OSError:
+            raise MulticastJoinError(
+                f"invalid address literal for {socket.AddressFamily(self.addressFamily).name}: {addr!r}"
+            )
 
     @property
     def _ipproto(self) -> int:
@@ -95,7 +101,7 @@ class MulticastMixin:
                 assert isinstance(
                     addr, str
                 ), "IPv4 interfaces are specified as addresses"
-                i = _addrpack(await _maybeResolve(self.reactor, addr))
+                i = self._addrpack(await _maybeResolve(self.reactor, addr))
             else:
                 assert isinstance(
                     addr, int
@@ -131,8 +137,8 @@ class MulticastMixin:
             resaddr = await _maybeResolve(self.reactor, addr)
             resif = await _maybeResolve(self.reactor, interface)
 
-            packaddr = _addrpack(resaddr)
-            packif = _addrpack(resif)
+            packaddr = self._addrpack(resaddr)
+            packif = self._addrpack(resif)
             try:
                 self.socket.setsockopt(self._ipproto, cmd, packaddr + packif)
             except OSError as e:
