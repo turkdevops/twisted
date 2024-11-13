@@ -621,15 +621,6 @@ def checkMulticastAvailability(
     "The local networking stack does not enable IPv4 multicast.",
 )
 class MulticastTests(TestCase):
-    if (
-        os.environ.get("INFRASTRUCTURE") == "AZUREPIPELINES"
-        and runtime.platform.isMacOSX()
-    ):
-        skip = "Does not work on Azure Pipelines"
-
-    if not interfaces.IReactorMulticast(reactor, None):
-        skip = "This reactor does not support multicast"
-
     interface: str = "0.0.0.0"
     expectedInterface: str | int = "0.0.0.0"
     clientAddress: str = "127.0.0.1"
