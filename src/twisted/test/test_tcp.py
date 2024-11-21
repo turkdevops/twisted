@@ -81,7 +81,9 @@ class ClosingFactory(protocol.ServerFactory):
         """
         Clean-up for tests to wait for the port to stop listening.
         """
-        if self._cleanerUpper is None:
+        if self._cleanerUpper is None:  # pragma: no cover
+            # Under normal test operation, the port should be already stopped.. Stop it here in
+            # the case the test execution failed without stopping the port.
             assert self.port
             return self.port.stopListening()
         return self._cleanerUpper
