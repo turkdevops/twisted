@@ -71,6 +71,7 @@ class ClosingFactory(protocol.ServerFactory):
     """
 
     _cleanerUpper = None
+    port: Optional[interfaces.IListeningPort] = None
 
     def buildProtocol(self, conn):
         self._cleanerUpper = self.port.stopListening()
@@ -81,6 +82,7 @@ class ClosingFactory(protocol.ServerFactory):
         Clean-up for tests to wait for the port to stop listening.
         """
         if self._cleanerUpper is None:
+            assert self.port
             return self.port.stopListening()
         return self._cleanerUpper
 
@@ -117,8 +119,8 @@ class MyProtocolFactoryMixin:
 
     protocolFactory = AccumulatingProtocol
 
-    protocolConnectionMade = None
-    protocolConnectionLost = None
+    protocolConnectionMade: Optional[defer.Deferred[AccumulatingProtocol]] = None
+    protocolConnectionLost: Optional[defer.Deferred[AccumulatingProtocol]] = None
     lastProtocol: Optional[AccumulatingProtocol] = None
     called = 0
 
@@ -153,6 +155,8 @@ class MyClientFactory(MyProtocolFactoryMixin, protocol.ClientFactory):
 
     failed = 0
     stopped = 0
+    deferred: defer.Deferred[None]
+    failDeferred: defer.Deferred[None]
 
     def __init__(self):
         MyProtocolFactoryMixin.__init__(self)
