@@ -810,13 +810,6 @@ class CannotBindTests(TestCase):
         return theDeferred
 
 
-class MyOtherClientFactory(protocol.ClientFactory):
-    def buildProtocol(self, address):
-        self.address = address
-        self.lastProtocol = AccumulatingProtocol()
-        return self.protocol
-
-
 class LocalRemoteAddressTests(TestCase):
     """
     Tests for correct getHost/getPeer values and that the correct address is
