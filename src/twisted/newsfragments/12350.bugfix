@@ -1,2 +1,0 @@
-twisted.internet.endpoints.clientFromString can handle "tls:" endpoints with default `bindAddress`.
-This was a regression introduced in 24.10.0.

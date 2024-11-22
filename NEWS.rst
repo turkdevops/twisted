@@ -8,6 +8,77 @@ https://twisted.org/trac/ticket/<number>
 
 .. towncrier release notes start
 
+Twisted 24.11.0rc1 (2024-11-22)
+===============================
+
+Features
+--------
+
+- Twisted's implementations of twisted.internet.interfaces.IReactorMulticast now accept IPv6 literals and allow for IPv6 multicast. (#6597)
+- TCP throughput when sending data is slightly faster. (#12334)
+
+
+Bugfixes
+--------
+
+- twisted.internet.endpoints.clientFromString can handle "tls:" endpoints with default `bindAddress`.
+  This was a regression introduced in 24.10.0. (#12350)
+- HTTP server can handle listening on filesystem UNIX sockets.
+  This was a regression introduced in 24.10.0. (#12365)
+- twisted.internet.tcp.Connection.setTcpNoDelay was updated to fix a potential failure when setting TCP_NODELAY on macOS. (#12372)
+
+
+Deprecations and Removals
+-------------------------
+
+- twisted.python.constants, deprecated since 16.5.0, has been removed. (#12361)
+
+
+Misc
+----
+
+- #12354, #12355, #12356, #12357, #12367
+
+
+Conch
+-----
+
+No significant changes.
+
+
+Web
+---
+
+No significant changes.
+
+
+Mail
+----
+
+Bugfixes
+~~~~~~~~
+
+- twisted.mail.imap.IMAPServer.arg_fetchatt can now detect that a IMAP partial request has been made that is longer than the original message and alter the output of the response in order to match the IMAPRev4 spec. (#12345)
+
+
+Words
+-----
+
+No significant changes.
+
+
+Names
+-----
+
+No significant changes.
+
+
+Trial
+-----
+
+No significant changes.
+
+
 Twisted 24.10.0 (2024-10-28)
 ============================
 
