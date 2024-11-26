@@ -484,7 +484,8 @@ jobs:
       run: |
         tox -e narrativedocs
 
-  # Used for various release automation, but not publishing
+  # Used for various release automation, but not for publishing, as publishing needs extra permissions for the API token.
+  # So we isolate the actual publish step in a separate job.
   # This is also executed for each PR to exercise the release as much
   # as possible and reduce the possibility of finding bugs in the release
   # process late in the release cycle,
