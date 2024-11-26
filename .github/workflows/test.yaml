@@ -493,7 +493,6 @@ jobs:
     name: Build and check release, then upload artifact
     runs-on: 'ubuntu-22.04'
     steps:
-
     - uses: actions/checkout@v4
 
     - name: Set up Python
@@ -535,7 +534,6 @@ jobs:
     name: publish on twisted-* tag
     runs-on: ubuntu-latest
     steps:
-
     - uses: actions/download-artifact@v4
       with:
         name: dist
