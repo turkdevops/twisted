@@ -546,6 +546,7 @@ jobs:
 
   release-publish-success:
     needs: release-publish
+    runs-on: ubuntu-latest
     if: always()
     steps:
       - name: fail if release-publish failed
