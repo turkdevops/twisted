@@ -531,6 +531,9 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/twisted-')
     environment:
       release
+    permissions:
+      # IMPORTANT: this permission is mandatory for trusted publishing
+      id-token: write
     name: publish on twisted-* tag
     runs-on: ubuntu-latest
     steps:
