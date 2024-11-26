@@ -154,7 +154,6 @@ Documentation = "https://docs.twisted.org/"
 Homepage = "https://twisted.org/"
 Issues = "https://github.com/twisted/twisted/issues"
 Source = "https://github.com/twisted/twisted"
-Twitter = "https://twitter.com/twistedmatrix"
 Funding-PSF = "https://psfmember.org/civicrm/contribute/transact/?reset=1&id=44"
 Funding-GitHub = "https://github.com/sponsors/twisted"
 
