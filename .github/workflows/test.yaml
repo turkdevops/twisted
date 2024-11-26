@@ -484,7 +484,13 @@ jobs:
       run: |
         tox -e narrativedocs
 
+  # Used for various release automation, but not publishing
+  # This is also executed for each PR to exercise the release as much
+  # as possible and reduce the possibility of finding bugs in the release
+  # process late in the release cycle,
+  # The files are published only when a tag is created using the next job, release-publish
   release-build:
+      name: Build and check release, then upload artifact
     runs-on: 'ubuntu-22.04'
     steps:
 
@@ -516,11 +522,10 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/twisted-')
       run: python admin/check_tag_version_match.py "${{ github.ref }}"
 
-  # Used for various release automation.
-  # This is also executed for each PR to exercise the release as much
+  # Used exclusively for various release publishing.
+  # This is only executed on tags, but just does the publish to exercise the release as much
   # as possible and reduce the possibility of finding bugs in the release
   # process late in the release cycle,
-  # The files are published only when a tag is created.
   release-publish:
     needs:
       release-build
