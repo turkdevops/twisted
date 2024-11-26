@@ -573,8 +573,13 @@ jobs:
       - release-publish-success
       - coverage-report
     steps:
-      - v1.2.2
-      - name: Decide whether the needed jobs succeeded or failed
-        uses: re-actors/alls-green@v1.2.2
-        with:
-          jobs: ${{ toJSON(needs) }}
+      - name: Require all successes
+        shell: python
+        env:
+          RESULTS: ${{ toJSON(needs.*.result) }}
+        run: |
+          import json
+          import os
+          import sys
+          results = json.loads(os.environ["RESULTS"])
+          sys.exit(0 if all(result == "success" for result in results) else 1)
