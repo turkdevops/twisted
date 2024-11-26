@@ -550,7 +550,7 @@ jobs:
     if: always()
     steps:
       - name: fail if release-publish failed
-        if: ${{ needs.release-publish.result != 'success' }}
+        if: ${{ contains(['success', 'skipped'], needs.release-publish.result) }}
         run: exit 1
 
   # We have this job so that the PR can be blocked on a single job.
