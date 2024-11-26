@@ -545,7 +545,7 @@ jobs:
     - name: Publish to PyPI - on tag
       uses: pypa/gh-action-pypi-publish@v1.12.2
 
-  release-publish-success:
+  release-publish-success-or-skipped:
     needs: release-publish
     runs-on: ubuntu-latest
     if: always()
@@ -572,7 +572,7 @@ jobs:
       - apidocs
       - static-checks
       - release-build
-      - release-publish-success
+      - release-publish-success-or-skipped
       - coverage-report
     steps:
       - name: Require all successes
