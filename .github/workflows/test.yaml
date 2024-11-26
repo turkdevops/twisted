@@ -492,7 +492,10 @@ jobs:
   # The files are published only when a tag is created.
   release-publish:
     name: Check release and publish on twisted-* tag
-    runs-on: 'ubuntu-22.04'
+    runs-on: ubuntu-latest
+    permissions:
+      # IMPORTANT: this permission is mandatory for trusted publishing
+      id-token: write
     steps:
     - uses: actions/checkout@v4
 
@@ -518,10 +521,7 @@ jobs:
       run: python admin/check_tag_version_match.py "${{ github.ref }}"
 
     - name: Publish to PyPI - on tag
-      if: startsWith(github.ref, 'refs/tags/twisted-')
-      uses: pypa/gh-action-pypi-publish@v1.5.1
-      with:
-        password: ${{ secrets.PYPI_UPLOAD_TOKEN }}
+      uses: pypa/gh-action-pypi-publish@release/v1
 
 
   # We have this job so that the PR can be blocked on a single job.
