@@ -490,7 +490,7 @@ jobs:
   # process late in the release cycle,
   # The files are published only when a tag is created using the next job, release-publish
   release-build:
-      name: Build and check release, then upload artifact
+    name: Build and check release, then upload artifact
     runs-on: 'ubuntu-22.04'
     steps:
 
