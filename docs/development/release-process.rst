@@ -319,7 +319,7 @@ We welcome additional volunteers to help drive the release effort.
 Notes
 -----
 
-The release process uses a GitHub Actions environment, configured here: 
+The release process uses a GitHub Actions environment, configured here:
 https://github.com/twisted/twisted/settings/environments/4731362866/edit
 currently only tags of the form 'twisted-*' can use that environment
 and only CI runs in that environment can release to PyPI.
