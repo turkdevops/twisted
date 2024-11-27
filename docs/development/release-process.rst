@@ -137,7 +137,8 @@ Prepare the branch
 #. Use ``Twisted VERSION`` as the name of the release, for example ``Twisted 24.2.0rc1``.
 #. Add the release NEWS to GitHub Release page.
 #. Make sure 'This is a pre-release` is checked.
-#. Github Actions will upload the dist to PyPI when a new tag is pushed to the repo, using the 'release' environment.
+#. Github Actions will upload the dist to PyPI when a new tag is pushed to the repo, using the GitHub 'release' environment.
+#. In PyPI the GitHub Actions `test.yaml` workflow is configure to allow publishing new PyPI releases.
 #. You can check the status of the automatic upload via `GitHub Action <https://github.com/twisted/twisted/actions/workflows/test.yaml?query=event%3Apush>`_
 #. Read the Docs hooks not have version for the release candidate.
    Use the Read the Docs published for the pull request.
@@ -316,8 +317,8 @@ We just do a normal release using the calendar base versioning scheme.
 We welcome additional volunteers to help drive the release effort.
 
 
-Notes
------
+Secirity notes
+--------------
 
 The release process uses a GitHub Actions environment, configured here:
 https://github.com/twisted/twisted/settings/environments/4731362866/edit
