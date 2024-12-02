@@ -8,8 +8,10 @@ https://twisted.org/trac/ticket/<number>
 
 .. towncrier release notes start
 
-Twisted 24.11.0rc2 (2024-12-02)
-===============================
+Twisted 24.11.0 (2024-12-02)
+============================
+
+There are no changes since 24.11.0rc2.
 
 In comparison to 24.11.0rc1, this release includes and update to do the PyPI release using the trusted publisher functionality of PyPI.
 
