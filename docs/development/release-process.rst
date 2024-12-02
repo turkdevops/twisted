@@ -320,10 +320,10 @@ We welcome additional volunteers to help drive the release effort.
 Secirity notes
 --------------
 
-The release process uses a GitHub Actions environment, configured here:
-https://github.com/twisted/twisted/settings/environments/4731362866/edit
-currently only tags of the form 'twisted-*' can use that environment
-and only CI runs in that environment can release to PyPI.
+The release process uses a GitHub Actions environment, configured `here
+<https://github.com/twisted/twisted/settings/environments/4731362866/edit>`_.
+Currently only branches and tags of the form `twisted-*` can use the `release` environment.
+Only jobs from `.github/workflows/test.yaml` that are executed in the `release` environment can release to PyPI.
 
 In the future it could be possible to add collaborators who can, for example,
 approve PRs but not create releases; or ensure releases are always reviewed.
