@@ -610,12 +610,12 @@ def _contentLength(connHeaders: Headers) -> Optional[int]:
     """
     Parse the I{Content-Length} connection header.
 
-    Two forms of duplicates are permitted. Header repetition:
+    Two forms of duplicates are permitted. Header repetition::
 
         Content-Length: 42
         Content-Length: 42
 
-    And field value repetition:
+    And field value repetition::
 
         Content-Length: 42, 42
 
