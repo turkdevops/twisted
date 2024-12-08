@@ -58,6 +58,14 @@ class TestCase(SynchronousTestCase):
         """
         super().__init__(methodName)
 
+        # Acquire and store real reactor so that it does not interfere with any
+        # patching to the reactor done by the user.
+        from twisted.internet import reactor
+
+        # A unique name must be used in order not to clash with user code that
+        # sets their own attributes.
+        self._twistedPrivateScheduler = reactor
+
     def assertFailure(self, deferred, *expectedFailures):
         """
         Fail if C{deferred} does not errback with one of C{expectedFailures}.
@@ -84,8 +92,6 @@ class TestCase(SynchronousTestCase):
     failUnlessFailure = assertFailure
 
     def _run(self, func, funcDescription, result):
-        from twisted.internet import reactor
-
         timeout = self.getTimeout()
 
         def onTimeout(d):
@@ -102,7 +108,7 @@ class TestCase(SynchronousTestCase):
                 # if the deferred has been called already but the *back chain
                 # is still unfinished, crash the reactor and report timeout
                 # error ourself.
-                reactor.crash()
+                self._twistedPrivateScheduler.crash()
                 self._timedOut = True  # see self._wait
                 todo = self.getTodo()
                 if todo is not None and todo.expected(f):
@@ -121,7 +127,7 @@ class TestCase(SynchronousTestCase):
         d = defer.maybeDeferred(
             utils.runWithWarningsSuppressed, self._getSuppress(), func
         )
-        call = reactor.callLater(timeout, onTimeout, d)
+        call = self._twistedPrivateScheduler.callLater(timeout, onTimeout, d)
         d.addBoth(lambda x: call.active() and call.cancel() or x)
         return d
 
