@@ -83,14 +83,14 @@ class TestCase(SynchronousTestCase):
 
     failUnlessFailure = assertFailure
 
-    def _run(self, method, methodName, result):
+    def _run(self, func, funcDescription, result):
         from twisted.internet import reactor
 
         timeout = self.getTimeout()
 
         def onTimeout(d):
             e = defer.TimeoutError(
-                f"{self!r} ({methodName}) still running at {timeout} secs"
+                f"{self!r} ({funcDescription}) still running at {timeout} secs"
             )
             f = failure.Failure(e)
             # try to errback the deferred that the test returns (for no gorram
@@ -113,15 +113,13 @@ class TestCase(SynchronousTestCase):
         onTimeout = utils.suppressWarnings(
             onTimeout, util.suppress(category=DeprecationWarning)
         )
-        if inspect.isgeneratorfunction(method):
+        if inspect.isgeneratorfunction(func):
             exc = TypeError(
-                "{!r} is a generator function and therefore will never run".format(
-                    method
-                )
+                "{!r} is a generator function and therefore will never run".format(func)
             )
             return defer.fail(exc)
         d = defer.maybeDeferred(
-            utils.runWithWarningsSuppressed, self._getSuppress(), method
+            utils.runWithWarningsSuppressed, self._getSuppress(), func
         )
         call = reactor.callLater(timeout, onTimeout, d)
         d.addBoth(lambda x: call.active() and call.cancel() or x)
