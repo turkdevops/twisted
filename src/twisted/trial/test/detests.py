@@ -186,6 +186,34 @@ class TimeoutTests(unittest.TestCase):
 
     test_timeoutZero.timeout = 0  # type: ignore[attr-defined]
 
+    def test_addCleanupPassDefault(self):
+        """
+        A cleanup can return a deferred.
+        The cleanup is successuful as long as the deferred is resolve sooner than the default
+        test case timeout (DEFAULT_TIMEOUT_DURATION seconds)
+        """
+
+        def cleanup():
+            d = defer.Deferred()
+            reactor.callLater(0, d.callback, "success")
+            return d
+
+        self.addCleanup(cleanup)
+
+    def test_addCleanupTimeout(self):
+        """
+        A cleanup can return a deferred.
+        When the deferred returned by addCleanup is not resolved sooner than the
+        test's timeout, the test is considered failed.
+        """
+
+        def cleanup():
+            return defer.Deferred()
+
+        self.addCleanup(cleanup)
+
+    test_addCleanupTimeout.timeout = 0.1  # type: ignore[attr-defined]
+
     def test_expectedFailure(self):
         return defer.Deferred()
 

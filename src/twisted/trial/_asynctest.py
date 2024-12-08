@@ -209,7 +209,11 @@ class TestCase(SynchronousTestCase):
         while len(self._cleanups) > 0:
             func, args, kwargs = self._cleanups.pop()
             try:
-                yield func(*args, **kwargs)
+                yield self._run(
+                    lambda: func(*args, **kwargs),
+                    f"cleanup function {func.__name__}",
+                    result,
+                )
             except Exception:
                 failures.append(failure.Failure())
 
@@ -313,6 +317,9 @@ class TestCase(SynchronousTestCase):
 
         If the function C{f} returns a Deferred, C{TestCase} will wait until the
         Deferred has fired before proceeding to the next function.
+
+        If the function takes more than C{timeout} settings, then the test will
+        raise an error.
         """
         return super().addCleanup(f, *args, **kwargs)
 

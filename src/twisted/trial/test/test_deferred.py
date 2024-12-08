@@ -210,6 +210,28 @@ class TimeoutTests(TestTester):
         assert isinstance(result.errors[0][1], Failure)
         self._wasTimeout(result.errors[0][1])
 
+    def test_addCleanupPassDefault(self) -> None:
+        """
+        See L{twisted.trial.test.detests.TimeoutTests.test_addCleanupPassDefault}
+        """
+        result = self.runTest("test_addCleanupPassDefault")
+        self.assertTrue(result.wasSuccessful())
+        self.assertEqual(result.testsRun, 1)
+
+    def test_addCleanupTimeout(self) -> None:
+        """
+        See L{twisted.trial.test.detests.TimeoutTests.test_addCleanupTimeout}
+
+        TODO: current test does not mock reactor and thus the test spends real time
+        until the timeout fires.
+        """
+        result = self.runTest("test_addCleanupTimeout")
+        self.assertFalse(result.wasSuccessful())
+        self.assertEqual(result.testsRun, 1)
+        self.assertEqual(len(result.errors), 1)
+        assert isinstance(result.errors[0][1], Failure)
+        self._wasTimeout(result.errors[0][1])
+
     def test_skip(self) -> None:
         result = self.runTest("test_skip")
         self.assertTrue(result.wasSuccessful())
