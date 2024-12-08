@@ -134,10 +134,10 @@ class TestCase(SynchronousTestCase):
     def __call__(self, *args, **kwargs):
         return self.run(*args, **kwargs)
 
-    def deferSetUp(self, ignored, result):
+    def _deferSetUp(self, ignored, result):
         d = self._run(self.setUp, "setUp", result)
         d.addCallbacks(
-            self.deferTestMethod,
+            self._deferTestMethod,
             self._ebDeferSetUp,
             callbackArgs=(result,),
             errbackArgs=(result,),
@@ -151,9 +151,9 @@ class TestCase(SynchronousTestCase):
             result.addError(self, failure)
             if failure.check(KeyboardInterrupt):
                 result.stop()
-        return self.deferRunCleanups(None, result)
+        return self._deferRunCleanups(None, result)
 
-    def deferTestMethod(self, ignored, result):
+    def _deferTestMethod(self, ignored, result):
         d = self._run(getattr(self, self._testMethodName), self._testMethodName, result)
         d.addCallbacks(
             self._cbDeferTestMethod,
@@ -161,8 +161,8 @@ class TestCase(SynchronousTestCase):
             callbackArgs=(result,),
             errbackArgs=(result,),
         )
-        d.addBoth(self.deferRunCleanups, result)
-        d.addBoth(self.deferTearDown, result)
+        d.addBoth(self._deferRunCleanups, result)
+        d.addBoth(self._deferTearDown, result)
         return d
 
     def _cbDeferTestMethod(self, ignored, result):
@@ -188,7 +188,7 @@ class TestCase(SynchronousTestCase):
         else:
             result.addError(self, f)
 
-    def deferTearDown(self, ignored, result):
+    def _deferTearDown(self, ignored, result):
         d = self._run(self.tearDown, "tearDown", result)
         d.addErrback(self._ebDeferTearDown, result)
         return d
@@ -200,7 +200,7 @@ class TestCase(SynchronousTestCase):
         self._passed = False
 
     @defer.inlineCallbacks
-    def deferRunCleanups(self, ignored, result):
+    def _deferRunCleanups(self, ignored, result):
         """
         Run any scheduled cleanups and report errors (if any) to the result.
         object.
@@ -297,7 +297,7 @@ class TestCase(SynchronousTestCase):
         self._deprecateReactor(reactor)
         self._timedOut = False
         try:
-            d = self.deferSetUp(None, result)
+            d = self._deferSetUp(None, result)
             try:
                 self._wait(d)
             finally:
