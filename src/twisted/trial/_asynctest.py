@@ -83,7 +83,7 @@ class TestCase(SynchronousTestCase):
 
     failUnlessFailure = assertFailure
 
-    def _run(self, methodName, result):
+    def _run(self, method, methodName, result):
         from twisted.internet import reactor
 
         timeout = self.getTimeout()
@@ -113,7 +113,6 @@ class TestCase(SynchronousTestCase):
         onTimeout = utils.suppressWarnings(
             onTimeout, util.suppress(category=DeprecationWarning)
         )
-        method = getattr(self, methodName)
         if inspect.isgeneratorfunction(method):
             exc = TypeError(
                 "{!r} is a generator function and therefore will never run".format(
@@ -132,7 +131,7 @@ class TestCase(SynchronousTestCase):
         return self.run(*args, **kwargs)
 
     def deferSetUp(self, ignored, result):
-        d = self._run("setUp", result)
+        d = self._run(self.setUp, "setUp", result)
         d.addCallbacks(
             self.deferTestMethod,
             self._ebDeferSetUp,
@@ -151,7 +150,7 @@ class TestCase(SynchronousTestCase):
         return self.deferRunCleanups(None, result)
 
     def deferTestMethod(self, ignored, result):
-        d = self._run(self._testMethodName, result)
+        d = self._run(getattr(self, self._testMethodName), self._testMethodName, result)
         d.addCallbacks(
             self._cbDeferTestMethod,
             self._ebDeferTestMethod,
@@ -186,7 +185,7 @@ class TestCase(SynchronousTestCase):
             result.addError(self, f)
 
     def deferTearDown(self, ignored, result):
-        d = self._run("tearDown", result)
+        d = self._run(self.tearDown, "tearDown", result)
         d.addErrback(self._ebDeferTearDown, result)
         return d
 
