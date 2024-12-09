@@ -58,6 +58,14 @@ class TestCase(SynchronousTestCase):
         """
         super().__init__(methodName)
 
+        # Acquire and store real reactor so that it does not interfere with any
+        # patching to the reactor done by the user.
+        from twisted.internet import reactor
+
+        # A unique name must be used in order not to clash with user code that
+        # sets their own attributes.
+        self._twistedPrivateScheduler = reactor
+
     def assertFailure(self, deferred, *expectedFailures):
         """
         Fail if C{deferred} does not errback with one of C{expectedFailures}.
@@ -83,14 +91,12 @@ class TestCase(SynchronousTestCase):
 
     failUnlessFailure = assertFailure
 
-    def _run(self, methodName, result):
-        from twisted.internet import reactor
-
+    def _run(self, func, funcDescription, result):
         timeout = self.getTimeout()
 
         def onTimeout(d):
             e = defer.TimeoutError(
-                f"{self!r} ({methodName}) still running at {timeout} secs"
+                f"{self!r} ({funcDescription}) still running at {timeout} secs"
             )
             f = failure.Failure(e)
             # try to errback the deferred that the test returns (for no gorram
@@ -102,7 +108,7 @@ class TestCase(SynchronousTestCase):
                 # if the deferred has been called already but the *back chain
                 # is still unfinished, crash the reactor and report timeout
                 # error ourself.
-                reactor.crash()
+                self._twistedPrivateScheduler.crash()
                 self._timedOut = True  # see self._wait
                 todo = self.getTodo()
                 if todo is not None and todo.expected(f):
@@ -113,18 +119,15 @@ class TestCase(SynchronousTestCase):
         onTimeout = utils.suppressWarnings(
             onTimeout, util.suppress(category=DeprecationWarning)
         )
-        method = getattr(self, methodName)
-        if inspect.isgeneratorfunction(method):
+        if inspect.isgeneratorfunction(func):
             exc = TypeError(
-                "{!r} is a generator function and therefore will never run".format(
-                    method
-                )
+                "{!r} is a generator function and therefore will never run".format(func)
             )
             return defer.fail(exc)
         d = defer.maybeDeferred(
-            utils.runWithWarningsSuppressed, self._getSuppress(), method
+            utils.runWithWarningsSuppressed, self._getSuppress(), func
         )
-        call = reactor.callLater(timeout, onTimeout, d)
+        call = self._twistedPrivateScheduler.callLater(timeout, onTimeout, d)
         d.addBoth(lambda x: call.active() and call.cancel() or x)
         return d
 
@@ -132,7 +135,7 @@ class TestCase(SynchronousTestCase):
         return self.run(*args, **kwargs)
 
     def deferSetUp(self, ignored, result):
-        d = self._run("setUp", result)
+        d = self._run(self.setUp, "setUp", result)
         d.addCallbacks(
             self.deferTestMethod,
             self._ebDeferSetUp,
@@ -151,7 +154,7 @@ class TestCase(SynchronousTestCase):
         return self.deferRunCleanups(None, result)
 
     def deferTestMethod(self, ignored, result):
-        d = self._run(self._testMethodName, result)
+        d = self._run(getattr(self, self._testMethodName), self._testMethodName, result)
         d.addCallbacks(
             self._cbDeferTestMethod,
             self._ebDeferTestMethod,
@@ -186,7 +189,7 @@ class TestCase(SynchronousTestCase):
             result.addError(self, f)
 
     def deferTearDown(self, ignored, result):
-        d = self._run("tearDown", result)
+        d = self._run(self.tearDown, "tearDown", result)
         d.addErrback(self._ebDeferTearDown, result)
         return d
 
@@ -206,7 +209,11 @@ class TestCase(SynchronousTestCase):
         while len(self._cleanups) > 0:
             func, args, kwargs = self._cleanups.pop()
             try:
-                yield func(*args, **kwargs)
+                yield self._run(
+                    lambda: func(*args, **kwargs),
+                    f"cleanup function {func.__name__}",
+                    result,
+                )
             except Exception:
                 failures.append(failure.Failure())
 
@@ -310,6 +317,9 @@ class TestCase(SynchronousTestCase):
 
         If the function C{f} returns a Deferred, C{TestCase} will wait until the
         Deferred has fired before proceeding to the next function.
+
+        If the function takes more than C{timeout} settings, then the test will
+        raise an error.
         """
         return super().addCleanup(f, *args, **kwargs)
 
