@@ -105,6 +105,9 @@ class TestResult(pyunit.TestResult):
     # The duration of the test. It is None until the test completes.
     _lastTime: Optional[int]
 
+    # Make pytest not think this is test class
+    __test__ = False
+
     def __init__(self):
         super().__init__()
         self.skips = []
