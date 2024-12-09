@@ -181,8 +181,9 @@ class TimeoutTests(TestTester):
     def getTest(self, name: str) -> detests.TimeoutTests:
         return detests.TimeoutTests(name)
 
-    def _wasTimeout(self, error: Failure) -> None:
+    def _wasTimeout(self, error: Failure, expectedMessage: str) -> None:
         self.assertEqual(error.check(defer.TimeoutError), defer.TimeoutError)
+        self.assertIn(expectedMessage, error.value.args[0])
 
     def test_pass(self) -> None:
         result = self.runTest("test_pass")
@@ -200,7 +201,9 @@ class TimeoutTests(TestTester):
         self.assertEqual(result.testsRun, 1)
         self.assertEqual(len(result.errors), 1)
         assert isinstance(result.errors[0][1], Failure)
-        self._wasTimeout(result.errors[0][1])
+        self._wasTimeout(
+            result.errors[0][1], "(test_timeout) still running at 0.1 secs"
+        )
 
     def test_timeoutZero(self) -> None:
         result = self.runTest("test_timeoutZero")
@@ -208,7 +211,9 @@ class TimeoutTests(TestTester):
         self.assertEqual(result.testsRun, 1)
         self.assertEqual(len(result.errors), 1)
         assert isinstance(result.errors[0][1], Failure)
-        self._wasTimeout(result.errors[0][1])
+        self._wasTimeout(
+            result.errors[0][1], "(test_timeoutZero) still running at 0.0 secs"
+        )
 
     def test_addCleanupPassDefault(self) -> None:
         """
@@ -230,7 +235,9 @@ class TimeoutTests(TestTester):
         self.assertEqual(result.testsRun, 1)
         self.assertEqual(len(result.errors), 1)
         assert isinstance(result.errors[0][1], Failure)
-        self._wasTimeout(result.errors[0][1])
+        self._wasTimeout(
+            result.errors[0][1], "(cleanup function cleanup) still running at 0.1 secs"
+        )
 
     def test_skip(self) -> None:
         result = self.runTest("test_skip")
@@ -244,14 +251,20 @@ class TimeoutTests(TestTester):
         self.assertEqual(result.testsRun, 1)
         self.assertEqual(len(result.expectedFailures), 1)
         assert isinstance(result.expectedFailures[0][1], Failure)
-        self._wasTimeout(result.expectedFailures[0][1])
+        self._wasTimeout(
+            result.expectedFailures[0][1],
+            "(test_expectedFailure) still running at 0.1 secs",
+        )
 
     def test_errorPropagation(self) -> None:
         result = self.runTest("test_errorPropagation")
         self.assertFalse(result.wasSuccessful())
         self.assertEqual(result.testsRun, 1)
         assert detests.TimeoutTests.timedOut is not None
-        self._wasTimeout(detests.TimeoutTests.timedOut)
+        self._wasTimeout(
+            detests.TimeoutTests.timedOut,
+            "(test_errorPropagation) still running at 0.1 secs",
+        )
 
     def test_classTimeout(self) -> None:
         loader = pyunit.TestLoader()
@@ -260,7 +273,7 @@ class TimeoutTests(TestTester):
         suite.run(result)
         self.assertEqual(len(result.errors), 1)
         assert isinstance(result.errors[0][1], Failure)
-        self._wasTimeout(result.errors[0][1])
+        self._wasTimeout(result.errors[0][1], "(testMethod) still running at 0.2 secs")
 
     def test_callbackReturnsNonCallingDeferred(self) -> None:
         # hacky timeout
@@ -273,7 +286,10 @@ class TimeoutTests(TestTester):
             call.cancel()
         self.assertFalse(result.wasSuccessful())
         assert isinstance(result.errors[0][1], Failure)
-        self._wasTimeout(result.errors[0][1])
+        self._wasTimeout(
+            result.errors[0][1],
+            "(test_calledButNeverCallback) still running at 0.1 secs",
+        )
 
 
 # The test loader erroneously attempts to run this:
