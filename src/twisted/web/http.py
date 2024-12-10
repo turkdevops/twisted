@@ -252,16 +252,16 @@ monthname_lower = [name and name.lower() for name in monthname]
 
 def _parseRequestLine(line: bytes) -> tuple[bytes, bytes, bytes]:
     """
-    Parse an HTTP request line, which looks like:
+    Parse an HTTP request line, which looks like::
 
         GET /foo/bar HTTP/1.1
 
     This function attempts to validate the well-formedness of
-    the line. RFC 9112 section 3 provides this ABNF:
+    the line. RFC 9112 section 3 provides this ABNF::
 
         request-line   = method SP request-target SP HTTP-version
 
-    We allow any method that is a valid token:
+    We allow any method that is a valid token::
 
         method         = token
         token          = 1*tchar
@@ -272,7 +272,7 @@ def _parseRequestLine(line: bytes) -> tuple[bytes, bytes, bytes]:
     We allow any non-empty request-target that contains only printable
     ASCII characters (no whitespace).
 
-    The RFC defines HTTP-version like this:
+    The RFC defines HTTP-version like this::
 
         HTTP-version  = HTTP-name "/" DIGIT "." DIGIT
         HTTP-name     = %s"HTTP"
@@ -283,7 +283,7 @@ def _parseRequestLine(line: bytes) -> tuple[bytes, bytes, bytes]:
 
     @returns: C{(method, request, version)} three-tuple
 
-    @raises: L{ValueError} when malformed
+    @raises ValueError: when malformed
     """
     method, request, version = line.split(b" ")
 
