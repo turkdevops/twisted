@@ -134,15 +134,13 @@ class TestCase(SynchronousTestCase):
     def __call__(self, *args, **kwargs):
         return self.run(*args, **kwargs)
 
-    def _deferSetUp(self, ignored, result):
-        d = self._run(self.setUp, "setUp", result)
-        d.addCallbacks(
-            self._deferTestMethod,
-            self._ebDeferSetUp,
-            callbackArgs=(result,),
-            errbackArgs=(result,),
-        )
-        return d
+    async def _deferSetUp(self, result):
+        try:
+            await self._run(self.setUp, "setUp", result)
+        except BaseException as e:  # May be KeyboardInterrupt
+            await self._ebDeferSetUp(failure.Failure(e), result)
+            return
+        await self._deferTestMethod(None, result)
 
     def _ebDeferSetUp(self, failure, result):
         if failure.check(SkipTest):
@@ -297,7 +295,7 @@ class TestCase(SynchronousTestCase):
         self._deprecateReactor(reactor)
         self._timedOut = False
         try:
-            d = self._deferSetUp(None, result)
+            d = defer.Deferred.fromCoroutine(self._deferSetUp(result))
             try:
                 self._wait(d)
             finally:
