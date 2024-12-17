@@ -172,7 +172,7 @@ class TestCase(SynchronousTestCase):
             finally:
                 await self._deferRunCleanups(None, result)
         finally:
-            await self._deferTearDown(None, result)
+            await self._deferTearDown(result)
 
     def _ebDeferTestMethod(self, f, result):
         todo = self.getTodo()
@@ -190,10 +190,11 @@ class TestCase(SynchronousTestCase):
         else:
             result.addError(self, f)
 
-    def _deferTearDown(self, ignored, result):
-        d = self._run(self.tearDown, "tearDown", result)
-        d.addErrback(self._ebDeferTearDown, result)
-        return d
+    async def _deferTearDown(self, result):
+        try:
+            await self._run(self.tearDown, "tearDown", result)
+        except BaseException as e:
+            self._ebDeferTearDown(failure.Failure(e), result)
 
     def _ebDeferTearDown(self, failure, result):
         result.addError(self, failure)
