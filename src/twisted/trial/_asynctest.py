@@ -66,6 +66,10 @@ class TestCase(SynchronousTestCase):
         # sets their own attributes.
         self._twistedPrivateScheduler = reactor
 
+        # Define whether tearDown needs to run.
+        # It is run only if setUp succeeded
+        self._twistedPrivateNeedsTearDown = False
+
     def assertFailure(self, deferred, *expectedFailures):
         """
         Fail if C{deferred} does not errback with one of C{expectedFailures}.
@@ -136,40 +140,44 @@ class TestCase(SynchronousTestCase):
 
     async def _deferSetUp(self, result):
         try:
+            try:
+                await self._deferSetUpAndRun(result)
+            finally:
+                await self._deferRunCleanups(None, result)
+        finally:
+            if self._twistedPrivateNeedsTearDown:
+                await self._deferTearDown(result)
+
+    async def _deferSetUpAndRun(self, result):
+        """
+        Execute the setUp and run part of a test. Teardown and cleanups are not executed.
+        """
+        try:
             await self._run(self.setUp, "setUp", result)
         except SkipTest as e:
             result.addSkip(self, self._getSkipReason(self.setUp, e))
-            await self._deferRunCleanups(None, result)
             return
         except KeyboardInterrupt as e:
             result.addError(self, failure.Failure(e))
             result.stop()
-            await self._deferRunCleanups(None, result)
             return
         except BaseException as e:
             result.addError(self, failure.Failure(e))
-            await self._deferRunCleanups(None, result)
             return
 
+        self._twistedPrivateNeedsTearDown = True
+
         try:
-            try:
-                try:
-                    await self._run(
-                        getattr(self, self._testMethodName),
-                        self._testMethodName,
-                        result
-                    )
-                    if self.getTodo() is not None:
-                        result.addUnexpectedSuccess(self, self.getTodo())
-                    else:
-                        self._passed = True
-                except BaseException as e:
-                    self._ebDeferTestMethod(failure.Failure(e), result)
-                    raise
-            finally:
-                await self._deferRunCleanups(None, result)
-        finally:
-            await self._deferTearDown(result)
+            await self._run(
+                getattr(self, self._testMethodName), self._testMethodName, result
+            )
+            if self.getTodo() is not None:
+                result.addUnexpectedSuccess(self, self.getTodo())
+            else:
+                self._passed = True
+        except BaseException as e:
+            self._ebDeferTestMethod(failure.Failure(e), result)
+            raise
 
     def _ebDeferTestMethod(self, f, result):
         todo = self.getTodo()
