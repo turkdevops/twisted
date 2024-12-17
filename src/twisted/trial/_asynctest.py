@@ -162,7 +162,10 @@ class TestCase(SynchronousTestCase):
                         self._testMethodName,
                         result
                     )
-                    self._cbDeferTestMethod(None, result)
+                    if self.getTodo() is not None:
+                        result.addUnexpectedSuccess(self, self.getTodo())
+                    else:
+                        self._passed = True
                 except BaseException as e:
                     self._ebDeferTestMethod(failure.Failure(e), result)
                     raise
@@ -170,13 +173,6 @@ class TestCase(SynchronousTestCase):
                 await self._deferRunCleanups(None, result)
         finally:
             await self._deferTearDown(None, result)
-
-    def _cbDeferTestMethod(self, ignored, result):
-        if self.getTodo() is not None:
-            result.addUnexpectedSuccess(self, self.getTodo())
-        else:
-            self._passed = True
-        return ignored
 
     def _ebDeferTestMethod(self, f, result):
         todo = self.getTodo()
