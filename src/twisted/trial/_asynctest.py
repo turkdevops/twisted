@@ -143,7 +143,7 @@ class TestCase(SynchronousTestCase):
             try:
                 await self._deferSetUpAndRun(result)
             finally:
-                await self._deferRunCleanups(None, result)
+                await self._deferRunCleanups(result)
         finally:
             if self._twistedPrivateNeedsTearDown:
                 await self._deferTearDown(result)
@@ -207,7 +207,7 @@ class TestCase(SynchronousTestCase):
             self._passed = False
 
     @defer.inlineCallbacks
-    def _deferRunCleanups(self, ignored, result):
+    def _deferRunCleanups(self, result):
         """
         Run any scheduled cleanups and report errors (if any) to the result.
         object.
