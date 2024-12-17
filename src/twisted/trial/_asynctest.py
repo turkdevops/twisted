@@ -151,19 +151,25 @@ class TestCase(SynchronousTestCase):
             await self._deferRunCleanups(None, result)
             return
 
-        await self._deferTestMethod(None, result)
+        await self._deferTestMethod(result)
 
-    def _deferTestMethod(self, ignored, result):
-        d = self._run(getattr(self, self._testMethodName), self._testMethodName, result)
-        d.addCallbacks(
-            self._cbDeferTestMethod,
-            self._ebDeferTestMethod,
-            callbackArgs=(result,),
-            errbackArgs=(result,),
-        )
-        d.addBoth(self._deferRunCleanups, result)
-        d.addBoth(self._deferTearDown, result)
-        return d
+    async def _deferTestMethod(self, result):
+        try:
+            try:
+                try:
+                    await self._run(
+                        getattr(self, self._testMethodName),
+                        self._testMethodName,
+                        result
+                    )
+                    self._cbDeferTestMethod(None, result)
+                except BaseException as e:
+                    self._ebDeferTestMethod(failure.Failure(e), result)
+                    raise
+            finally:
+                await self._deferRunCleanups(None, result)
+        finally:
+            await self._deferTearDown(None, result)
 
     def _cbDeferTestMethod(self, ignored, result):
         if self.getTodo() is not None:
