@@ -193,14 +193,13 @@ class TestCase(SynchronousTestCase):
     async def _deferTearDown(self, result):
         try:
             await self._run(self.tearDown, "tearDown", result)
-        except BaseException as e:
-            self._ebDeferTearDown(failure.Failure(e), result)
-
-    def _ebDeferTearDown(self, failure, result):
-        result.addError(self, failure)
-        if failure.check(KeyboardInterrupt):
+        except KeyboardInterrupt as e:
+            result.addError(self, failure.Failure(e))
             result.stop()
-        self._passed = False
+            self._passed = False
+        except BaseException as e:
+            result.addError(self, failure.Failure(e))
+            self._passed = False
 
     @defer.inlineCallbacks
     def _deferRunCleanups(self, ignored, result):
