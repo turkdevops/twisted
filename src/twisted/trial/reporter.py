@@ -542,7 +542,7 @@ class Reporter(TestResult):
 
         When a C{TestCase} method fails synchronously, the stack looks like
         this:
-         - [0]: C{TestCase._deferTestMethod}
+         - [0]: C{TestCase._deferSetUp}
          - [1]: C{defer.__iter__}
          - [2]: C{defer.raiseException}
          - [3]: C{defer.maybeDeferred}
@@ -555,7 +555,7 @@ class Reporter(TestResult):
         returns a C{Deferred}, and that C{Deferred}'s errback fires), the stack
         captured inside the resulting C{Failure} looks like this:
 
-         - [0]: C{TestCase._deferTestMethod}
+         - [0]: C{TestCase._deferSetUp}
          - [1]: C{defer.__iter__}
          - [2]: C{defer.Deferred._runCallbacks}
          - [3:-2]: code in the testmethod which failed
@@ -589,12 +589,12 @@ class Reporter(TestResult):
 
         syncCase = [("_run", "_synctest"), ("runWithWarningsSuppressed", "util")]
         asyncCase = [
-            ("_deferTestMethod", "_asynctest"),
+            ("_deferSetUp", "_asynctest"),
             ("__iter__", "defer"),
             ("raiseException", "failure"),
         ]
         deferCase = [
-            ("_deferTestMethod", "_asynctest"),
+            ("_deferSetUp", "_asynctest"),
             ("__iter__", "defer"),
             ("_runCallbacks", "defer"),
         ]

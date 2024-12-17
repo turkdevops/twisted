@@ -151,9 +151,6 @@ class TestCase(SynchronousTestCase):
             await self._deferRunCleanups(None, result)
             return
 
-        await self._deferTestMethod(result)
-
-    async def _deferTestMethod(self, result):
         try:
             try:
                 try:
