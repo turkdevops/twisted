@@ -137,19 +137,21 @@ class TestCase(SynchronousTestCase):
     async def _deferSetUp(self, result):
         try:
             await self._run(self.setUp, "setUp", result)
-        except BaseException as e:  # May be KeyboardInterrupt
-            await self._ebDeferSetUp(e, result)
-            return
-        await self._deferTestMethod(None, result)
-
-    async def _ebDeferSetUp(self, e, result):
-        if isinstance(e, SkipTest):
+        except SkipTest as e:
             result.addSkip(self, self._getSkipReason(self.setUp, e))
-        else:
+            await self._deferRunCleanups(None, result)
+            return
+        except KeyboardInterrupt as e:
             result.addError(self, failure.Failure(e))
-            if isinstance(e, KeyboardInterrupt):
-                result.stop()
-        await self._deferRunCleanups(None, result)
+            result.stop()
+            await self._deferRunCleanups(None, result)
+            return
+        except BaseException as e:
+            result.addError(self, failure.Failure(e))
+            await self._deferRunCleanups(None, result)
+            return
+
+        await self._deferTestMethod(None, result)
 
     def _deferTestMethod(self, ignored, result):
         d = self._run(getattr(self, self._testMethodName), self._testMethodName, result)
