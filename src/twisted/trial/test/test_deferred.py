@@ -119,16 +119,6 @@ class DeferredTests(TestTester):
         self.assertTrue(result.wasSuccessful())
         self.assertEqual(result.testsRun, 1)
 
-    def test_passGenerated(self) -> None:
-        result = self.runTest("test_passGenerated")
-        self.assertTrue(result.wasSuccessful())
-        self.assertEqual(result.testsRun, 1)
-        self.assertTrue(detests.DeferredTests.touched)
-
-    test_passGenerated.supress = [  # type: ignore[attr-defined]
-        util.suppress(message="twisted.internet.defer.deferredGenerator is deprecated")
-    ]
-
     def test_passInlineCallbacks(self) -> None:
         """
         The body of a L{defer.inlineCallbacks} decorated test gets run.
