@@ -66,6 +66,10 @@ class TestCase(SynchronousTestCase):
         # sets their own attributes.
         self._twistedPrivateScheduler = reactor
 
+        # Define whether tearDown needs to run.
+        # It is run only if setUp succeeded
+        self._twistedPrivateNeedsTearDown = False
+
     def assertFailure(self, deferred, *expectedFailures):
         """
         Fail if C{deferred} does not errback with one of C{expectedFailures}.
@@ -134,43 +138,46 @@ class TestCase(SynchronousTestCase):
     def __call__(self, *args, **kwargs):
         return self.run(*args, **kwargs)
 
-    def _deferSetUp(self, ignored, result):
-        d = self._run(self.setUp, "setUp", result)
-        d.addCallbacks(
-            self._deferTestMethod,
-            self._ebDeferSetUp,
-            callbackArgs=(result,),
-            errbackArgs=(result,),
-        )
-        return d
+    async def _deferSetUp(self, result):
+        try:
+            try:
+                await self._deferSetUpAndRun(result)
+            finally:
+                await self._deferRunCleanups(result)
+        finally:
+            if self._twistedPrivateNeedsTearDown:
+                await self._deferTearDown(result)
 
-    def _ebDeferSetUp(self, failure, result):
-        if failure.check(SkipTest):
-            result.addSkip(self, self._getSkipReason(self.setUp, failure.value))
-        else:
-            result.addError(self, failure)
-            if failure.check(KeyboardInterrupt):
-                result.stop()
-        return self._deferRunCleanups(None, result)
+    async def _deferSetUpAndRun(self, result):
+        """
+        Execute the setUp and run part of a test. Teardown and cleanups are not executed.
+        """
+        try:
+            await self._run(self.setUp, "setUp", result)
+        except SkipTest as e:
+            result.addSkip(self, self._getSkipReason(self.setUp, e))
+            return
+        except KeyboardInterrupt as e:
+            result.addError(self, failure.Failure(e))
+            result.stop()
+            return
+        except BaseException as e:
+            result.addError(self, failure.Failure(e))
+            return
 
-    def _deferTestMethod(self, ignored, result):
-        d = self._run(getattr(self, self._testMethodName), self._testMethodName, result)
-        d.addCallbacks(
-            self._cbDeferTestMethod,
-            self._ebDeferTestMethod,
-            callbackArgs=(result,),
-            errbackArgs=(result,),
-        )
-        d.addBoth(self._deferRunCleanups, result)
-        d.addBoth(self._deferTearDown, result)
-        return d
+        self._twistedPrivateNeedsTearDown = True
 
-    def _cbDeferTestMethod(self, ignored, result):
-        if self.getTodo() is not None:
-            result.addUnexpectedSuccess(self, self.getTodo())
-        else:
-            self._passed = True
-        return ignored
+        try:
+            await self._run(
+                getattr(self, self._testMethodName), self._testMethodName, result
+            )
+            if self.getTodo() is not None:
+                result.addUnexpectedSuccess(self, self.getTodo())
+            else:
+                self._passed = True
+        except BaseException as e:
+            self._ebDeferTestMethod(failure.Failure(e), result)
+            raise
 
     def _ebDeferTestMethod(self, f, result):
         todo = self.getTodo()
@@ -188,19 +195,19 @@ class TestCase(SynchronousTestCase):
         else:
             result.addError(self, f)
 
-    def _deferTearDown(self, ignored, result):
-        d = self._run(self.tearDown, "tearDown", result)
-        d.addErrback(self._ebDeferTearDown, result)
-        return d
-
-    def _ebDeferTearDown(self, failure, result):
-        result.addError(self, failure)
-        if failure.check(KeyboardInterrupt):
+    async def _deferTearDown(self, result):
+        try:
+            await self._run(self.tearDown, "tearDown", result)
+        except KeyboardInterrupt as e:
+            result.addError(self, failure.Failure(e))
             result.stop()
-        self._passed = False
+            self._passed = False
+        except BaseException as e:
+            result.addError(self, failure.Failure(e))
+            self._passed = False
 
     @defer.inlineCallbacks
-    def _deferRunCleanups(self, ignored, result):
+    def _deferRunCleanups(self, result):
         """
         Run any scheduled cleanups and report errors (if any) to the result.
         object.
@@ -297,7 +304,7 @@ class TestCase(SynchronousTestCase):
         self._deprecateReactor(reactor)
         self._timedOut = False
         try:
-            d = self._deferSetUp(None, result)
+            d = defer.Deferred.fromCoroutine(self._deferSetUp(result))
             try:
                 self._wait(d)
             finally:
