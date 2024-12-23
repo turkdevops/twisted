@@ -49,7 +49,7 @@ from twisted.internet.interfaces import IDelayedCall, IReactorTime
 from twisted.logger import Logger
 from twisted.python import lockfile
 from twisted.python.compat import _PYPY, cmp, comparable
-from twisted.python.deprecate import deprecated, warnAboutFunction
+from twisted.python.deprecate import deprecated, deprecatedProperty, warnAboutFunction
 from twisted.python.failure import Failure, _extraneous
 
 log = Logger()
@@ -469,11 +469,15 @@ class Deferred(Awaitable[_SelfResultT]):
         @type canceller: a 1-argument callable which takes a L{Deferred}. The
             return result is ignored.
         """
-        self.callbacks: List[_CallbackChain] = []
+        self._callbacks: List[_CallbackChain] = []
         self._canceller = canceller
         if self.debug:
             self._debugInfo = DebugInfo()
             self._debugInfo.creator = traceback.format_stack()[:-1]
+
+    @deprecatedProperty(Version("Twisted", "NEXT", 0, 0))
+    def callbacks(self) -> List[_CallbackChain]:
+        return self._callbacks
 
     def addCallbacks(
         self,
@@ -528,7 +532,7 @@ class Deferred(Awaitable[_SelfResultT]):
 
         # Note that this logic is duplicated in addCallbac/addErrback/addBoth
         # for performance reasons.
-        self.callbacks.append(
+        self._callbacks.append(
             (
                 (callback, callbackArgs, callbackKeywords),
                 (errback, errbackArgs, errbackKeywords),
@@ -622,7 +626,7 @@ class Deferred(Awaitable[_SelfResultT]):
         """
         # This could be implemented as a call to addCallbacks, but doing it
         # directly is faster.
-        self.callbacks.append(((callback, args, kwargs), (_failthru, (), {})))
+        self._callbacks.append(((callback, args, kwargs), (_failthru, (), {})))
 
         if self.called:
             self._runCallbacks()
@@ -664,7 +668,7 @@ class Deferred(Awaitable[_SelfResultT]):
         """
         # This could be implemented as a call to addCallbacks, but doing it
         # directly is faster.
-        self.callbacks.append(((passthru, (), {}), (errback, args, kwargs)))
+        self._callbacks.append(((passthru, (), {}), (errback, args, kwargs)))
 
         if self.called:
             self._runCallbacks()
@@ -754,7 +758,7 @@ class Deferred(Awaitable[_SelfResultT]):
         # This could be implemented as a call to addCallbacks, but doing it
         # directly is faster.
         call = (callback, args, kwargs)
-        self.callbacks.append((call, call))
+        self._callbacks.append((call, call))
 
         if self.called:
             self._runCallbacks()
@@ -1048,8 +1052,8 @@ class Deferred(Awaitable[_SelfResultT]):
 
             finished = True
             current._chainedTo = None
-            while current.callbacks:
-                item = current.callbacks.pop(0)
+            while current._callbacks:
+                item = current._callbacks.pop(0)
                 if not isinstance(current.result, Failure):
                     callback, args, kwargs = item[0]
                 else:
@@ -1123,7 +1127,7 @@ class Deferred(Awaitable[_SelfResultT]):
                             # running its callbacks right now.  Therefore we can
                             # append to the callbacks list directly instead of
                             # using addCallbacks.
-                            currentResult.callbacks.append(current._continuation())
+                            currentResult._callbacks.append(current._continuation())
                             break
                         else:
                             # Yep, it did.  Steal it.
@@ -1990,9 +1994,9 @@ def _addCancelCallbackToDeferred(
     @param it: The L{Deferred} to add the errback to.
     @param status: a L{_CancellationStatus} tracking the current status of C{gen}
     """
-    it.callbacks, tmp = [], it.callbacks
+    it._callbacks, tmp = [], it._callbacks
     it = it.addErrback(_handleCancelInlineCallbacks, status)
-    it.callbacks.extend(tmp)
+    it._callbacks.extend(tmp)
     it.errback(_InternalInlineCallbacksCancelledError())
 
 
