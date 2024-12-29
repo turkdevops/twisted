@@ -178,7 +178,7 @@ Here is a simple Resource object:
     class Hello(Resource):
         isLeaf = True
         def getChild(self, name, request):
-            if name == '':
+            if name == b'':
                 return self
             return Resource.getChild(self, name, request)
 
