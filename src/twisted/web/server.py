@@ -36,7 +36,6 @@ from twisted.web.error import UnsupportedMethod
 from twisted.web.http import (
     NO_CONTENT,
     NOT_MODIFIED,
-    HTTPChannel,
     HTTPFactory,
     Request as _HTTPRequest,
     datetimeToString,
@@ -98,7 +97,7 @@ class Request(Copyable, http.Request, components.Componentized):
     _encoder = None
     _log = Logger()
 
-    def __init__(self, channel: HTTPChannel, *args, **kw):
+    def __init__(self, channel, *args, **kw):
         _HTTPRequest.__init__(self, channel, *args, **kw)
         components.Componentized.__init__(self)
         # Disable parsing bodies if that's what the Site set:
