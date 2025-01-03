@@ -1,0 +1,1 @@
+A new twisted.web.server.Site.parseBody flag allows disabling parsing of HTTP request bodies.
