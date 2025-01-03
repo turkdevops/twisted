@@ -906,6 +906,11 @@ class Request:
 
     @ivar _log: A logger instance for request related messages.
     @type _log: L{twisted.logger.Logger}
+
+    @ivar parseBody: If C{True}, the default, parse MIME multipart and
+        URL-encoded body uploads into C{request.args}. This can use large
+        amounts of memory for large uploads.
+    @type parseBody: C{bool}
     """
 
     producer = None
@@ -926,6 +931,7 @@ class Request:
     _forceSSL = 0
     _disconnected = False
     _log = Logger()
+    parseBody: bool = True
 
     def __init__(self, channel: HTTPChannel, queued: object = _QUEUED_SENTINEL) -> None:
         """
@@ -1069,7 +1075,7 @@ class Request:
         if ctype is not None:
             ctype = ctype[0]
 
-        if self.method == b"POST" and ctype and clength:
+        if self.method == b"POST" and ctype and clength and self.parseBody:
             mfd = b"multipart/form-data"
             key = _parseContentType(ctype)
             if key == b"application/x-www-form-urlencoded":

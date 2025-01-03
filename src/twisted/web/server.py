@@ -36,6 +36,7 @@ from twisted.web.error import UnsupportedMethod
 from twisted.web.http import (
     NO_CONTENT,
     NOT_MODIFIED,
+    HTTPChannel,
     HTTPFactory,
     Request as _HTTPRequest,
     datetimeToString,
@@ -97,9 +98,11 @@ class Request(Copyable, http.Request, components.Componentized):
     _encoder = None
     _log = Logger()
 
-    def __init__(self, *args, **kw):
-        _HTTPRequest.__init__(self, *args, **kw)
+    def __init__(self, channel: HTTPChannel, *args, **kw):
+        _HTTPRequest.__init__(self, channel, *args, **kw)
         components.Componentized.__init__(self)
+        # Disable parsing bodies if that's what the Site set:
+        self.parseBody = channel.site.parseBody
 
     def getStateToCopyFor(self, issuer):
         x = self.__dict__.copy()
@@ -776,6 +779,11 @@ class Site(HTTPFactory):
 
     @ivar sessionCheckTime: Deprecated and unused. See
         L{Session.sessionTimeout} instead.
+
+    @ivar parseBody: If C{True}, the default, parse MIME multipart and
+        URL-encoded body uploads into C{request.args}. This can use large
+        amounts of memory for large uploads.
+    @type parseBody: C{bool}
     """
 
     counter = 0
@@ -784,6 +792,7 @@ class Site(HTTPFactory):
     sessionFactory = Session
     sessionCheckTime = 1800
     _entropy = os.urandom
+    parseBody: bool = True
 
     def __init__(self, resource, requestFactory=None, *args, **kwargs):
         """

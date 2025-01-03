@@ -1719,8 +1719,6 @@ class ChunkingTests(unittest.TestCase, ResponseTestMixin):
 
         This is essentially a copy of ParsingTests.test_multipartFormData,
         just with chunking put in.
-
-        This fails as of twisted version 18.9.0 because of bug #9678.
         """
         processed = []
 
@@ -2543,11 +2541,20 @@ abasdfg
         self.assertEqual(len(processed), 1)
         self.assertEqual(processed[0].args, {b"text": [b"abasdfg"]})
 
+        # Now check the disabled case:
+        self.assertEqual(MyRequest.parseBody, True)
+        MyRequest.parseBody = False
+        channel = self.runRequest(req, MyRequest, success=False)
+        self.assertEqual(channel.transport.value(), b"HTTP/1.0 200 OK\r\n\r\ndone")
+        self.assertEqual(len(processed), 2)
+        self.assertEqual(processed[1].args, {})
+
     def test_multipartFileData(self):
         """
-        If the request has a Content-Type of C{multipart/form-data},
-        and the form data is parseable and contains files, the file
-        portions will be added to the request's args.
+        If the request has a Content-Type of C{multipart/form-data}, and
+        C{Request.PARSE_MULTIPART_UPLOADS} is true, the form data is parseable
+        and contains files, the file portions will be added to the request's
+        args.
         """
         processed = []
 
@@ -2580,6 +2587,14 @@ Content-Length: """
         self.assertEqual(channel.transport.value(), b"HTTP/1.0 200 OK\r\n\r\ndone")
         self.assertEqual(len(processed), 1)
         self.assertEqual(processed[0].args, {b"uploadedfile": [b"abasdfg"]})
+
+        # Now check the disabled case:
+        self.assertEqual(MyRequest.parseBody, True)
+        MyRequest.parseBody = False
+        channel = self.runRequest(req.encode("ascii") + body, MyRequest, success=False)
+        self.assertEqual(channel.transport.value(), b"HTTP/1.0 200 OK\r\n\r\ndone")
+        self.assertEqual(len(processed), 2)
+        self.assertEqual(processed[1].args, {})
 
     def test_chunkedEncoding(self):
         """

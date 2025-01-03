@@ -957,6 +957,22 @@ class RequestTests(unittest.TestCase):
         self.assertEqual([12345], lengths)
         self.assertIs(contentFile, request.content)
 
+    def test_parseBodySetFromSite(self):
+        """
+        C{Request.parseBody} is set to match C{Site.parseBody}.
+        """
+        site = server.Site(resource.Resource())
+        self.assertEqual(site.parseBody, True)
+        channel = DummyChannel()
+        channel.site = site
+
+        request = server.Request(channel)
+        self.assertEqual(request.parseBody, True)
+
+        site.parseBody = False
+        request = server.Request(channel)
+        self.assertEqual(request.parseBody, False)
+
 
 class GzipEncoderTests(unittest.TestCase):
     def setUp(self):
