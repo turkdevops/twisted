@@ -11,7 +11,7 @@ Maintainer: Paul Swartz
 from __future__ import annotations
 
 import struct
-from typing import Callable, Tuple
+from typing import Callable, Tuple, Type
 
 from twisted.conch import error, interfaces
 from twisted.conch.ssh import keys, service, transport
@@ -27,7 +27,7 @@ from twisted.python import failure
 from twisted.python.compat import nativeString
 
 _ConchPortalTuple = Tuple[
-    type[interfaces.IConchUser], interfaces.IConchUser, Callable[[], None]
+    Type[interfaces.IConchUser], interfaces.IConchUser, Callable[[], None]
 ]
 
 
