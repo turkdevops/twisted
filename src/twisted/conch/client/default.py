@@ -17,6 +17,7 @@ import io
 import os
 import sys
 from base64 import decodebytes
+from typing import TYPE_CHECKING
 
 from twisted.conch.client import agent
 from twisted.conch.client.knownhosts import ConsoleUI, KnownHostsFile
@@ -76,11 +77,13 @@ def verifyHostKey(
         Failure types may include L{HostKeyChanged}, L{UserRejectedKey},
         L{IOError} or L{KeyboardInterrupt}.
     """
-    # from twisted.conch.client.options import ConchOptions
-    from twisted.conch.client.direct import SSHClientFactory
+    if TYPE_CHECKING:
+        # this is just a structured assumption that we are making about the
+        # transport's factory; behind a TYPE_CHECKING flag because we use some
+        # test fakes and don't want to nail down the type that much.
+        from twisted.conch.client.direct import SSHClientFactory
 
-    assert isinstance(transport.factory, SSHClientFactory)
-    # assert isinstance(transport.factory.options, ConchOptions)
+        assert isinstance(transport.factory, SSHClientFactory)
     actualHost = transport.factory.options["host"]
     actualKey = keys.Key.fromString(pubKey)
     kh = KnownHostsFile.fromPath(
