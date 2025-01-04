@@ -7,6 +7,7 @@ are ssh-userauth and ssh-connection.
 
 Maintainer: Paul Swartz
 """
+from __future__ import annotations
 
 from typing import TYPE_CHECKING, Dict
 

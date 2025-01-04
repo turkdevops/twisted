@@ -17,7 +17,7 @@ import struct
 import types
 import zlib
 from hashlib import md5, sha1, sha256, sha384, sha512
-from typing import Any, Callable, Dict, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, Tuple, Union
 
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
@@ -29,7 +29,6 @@ from typing_extensions import Literal
 from twisted import __version__ as twisted_version
 from twisted.conch.ssh import _kex, address, keys
 from twisted.conch.ssh.common import MP, NS, ffs, getMP, getNS
-from twisted.conch.ssh.factory import SSHFactory
 from twisted.conch.ssh.service import SSHService
 from twisted.internet import defer, protocol
 from twisted.logger import Logger
@@ -39,6 +38,9 @@ from twisted.python.failure import Failure
 
 # This import is needed if SHA256 hashing is used.
 # from twisted.python.compat import nativeString
+
+if TYPE_CHECKING:
+    from twisted.conch.ssh.factory import SSHFactory
 
 
 def _mpFromBytes(data):

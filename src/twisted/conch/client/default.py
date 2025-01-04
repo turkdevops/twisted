@@ -38,7 +38,7 @@ _open = open
 _input = input
 
 
-def verifyHostKye(
+def verifyHostKey(
     transport: SSHClientTransport, host: bytes, pubKey: bytes, fingerprint: str
 ) -> Deferred[bool]:
     """
