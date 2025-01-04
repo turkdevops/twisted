@@ -21,6 +21,7 @@ from twisted.cred import credentials
 from twisted.cred.error import UnauthorizedLogin
 from twisted.internet import defer, reactor
 from twisted.internet.defer import Deferred
+from twisted.internet.interfaces import IReactorTime
 from twisted.logger import Logger
 from twisted.python import failure
 from twisted.python.compat import nativeString
@@ -79,7 +80,7 @@ class SSHUserAuthServer(service.SSHService):
     attemptsBeforeDisconnect = 20
     # 20 login attempts before a disconnect
     passwordDelay = 1  # number of seconds to delay on a failed password
-    clock = reactor
+    clock: IReactorTime = IReactorTime(reactor)
     interfaceToMethod = {
         credentials.ISSHPrivateKey: b"publickey",
         credentials.IUsernamePassword: b"password",
