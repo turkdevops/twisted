@@ -244,9 +244,6 @@ class SSHUserAuthServer(service.SSHService):
                     "unauthorized login: {message}", message=reason.getErrorMessage()
                 )
             elif reason.check(error.ConchError):
-                print("REASON", reason)
-                self._log.info("oops")
-                self._log.failure("conch error", reason)
                 self._log.debug("reason: {reason}", reason=reason.getErrorMessage())
             else:
                 self._log.failure(
