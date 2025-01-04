@@ -113,7 +113,7 @@ class ClientOptions(ConchOptions):
 
 
 # Rest of code in "run"
-options = None
+options: Any = None
 conn = None
 exitStatus = 0
 old = None
@@ -199,7 +199,6 @@ def _stopReactor():
 
 
 def doConnect() -> None:
-    options: Any
     if "@" in options["host"]:
         options["user"], options["host"] = options["host"].split("@", 1)
     if not options.identitys:
