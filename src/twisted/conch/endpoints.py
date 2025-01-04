@@ -720,7 +720,7 @@ class _NewConnectionHelper:
         keys: list[Key] | None,
         password: bytes | None,
         agentEndpoint: IStreamClientEndpoint | None,
-        knownHosts: str | None,
+        knownHosts: str | None | KnownHostsFile,
         ui: ConsoleUI | None,
         tty: FilePath[bytes] | FilePath[str] = FilePath(b"/dev/tty"),
     ):
@@ -739,7 +739,10 @@ class _NewConnectionHelper:
         self.keys = [] if keys is None else keys
         self.password = password
         self.agentEndpoint = agentEndpoint
-        self.knownHosts = self._knownHosts(knownHosts)
+        if isinstance(knownHosts, KnownHostsFile):
+            self.knownHosts = knownHosts
+        else:
+            self.knownHosts = self._knownHosts(knownHosts)
 
         if ui is None:
             ui = ConsoleUI(self._opener)
@@ -761,7 +764,7 @@ class _NewConnectionHelper:
             return BytesIO(b"no")
 
     @classmethod
-    def _knownHosts(cls, path: str | None) -> KnownHostsFile:
+    def _knownHosts(cls, path: str | None = None) -> KnownHostsFile:
         """
         @return: A L{KnownHostsFile} instance pointed at the user's personal
             I{known hosts} file.
