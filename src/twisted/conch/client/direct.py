@@ -107,7 +107,9 @@ class SSHClientTransport(transport.SSHClientTransport):
         assert isinstance(
             peer, (IPv4Address, IPv6Address)
         ), "Address must have a host to verify against."
-        return self.factory.verifyHostKey(self, peer.host, pubKey, fingerprint)
+        return self.factory.verifyHostKey(
+            self, peer.host.encode("utf-8"), pubKey, fingerprint
+        )
 
     def setService(self, service):
         self._log.info("setting client server to {service}", service=service)
