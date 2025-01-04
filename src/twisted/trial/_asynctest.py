@@ -4,10 +4,9 @@
 
 """
 Things likely to be used by writers of unit tests.
-
-Maintainer: Jonathan Lange
 """
 
+from __future__ import annotations
 
 import inspect
 import warnings
