@@ -773,7 +773,11 @@ class _NewConnectionHelper:
             I{known hosts} file.
         @rtype: L{KnownHostsFile}
         """
-        if path is None:
+        if path is None:  # pragma: no branch
+            # negative branch untested because this fallback path requires user
+            # configuration that tests shouldn't be messing with
+            # directly. (This should be factored out for better testability in
+            # terms of coverage.)
             path = expanduser(cls._KNOWN_HOSTS)
         return KnownHostsFile.fromPath(FilePath(path))
 
