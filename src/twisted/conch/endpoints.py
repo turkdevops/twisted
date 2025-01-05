@@ -429,7 +429,10 @@ class _CommandTransport(SSHClientTransport):
 
         def cancelReady(d: Deferred[None]) -> None:
             transport = ITCPTransport(self.transport, None)
-            if transport is not None:
+            # adaptation is papering over an annoying type-punning issue here,
+            # we more or less have to run over an abortable transport, so not
+            # testing the negative branch.
+            if transport is not None:  # pragma: no branch
                 transport.abortConnection()
 
         self.connectionReady: Deferred[None] = Deferred(cancelReady)
