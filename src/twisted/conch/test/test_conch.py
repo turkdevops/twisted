@@ -125,6 +125,7 @@ class ConchTestOpenSSHProcess(protocol.ProcessProtocol):
     deferred: Deferred[None] | None = None
     buf = b""
     problems = b""
+    expectedExitCode: int = 0
 
     def _getDeferred(self):
         d, self.deferred = self.deferred, None
@@ -142,10 +143,11 @@ class ConchTestOpenSSHProcess(protocol.ProcessProtocol):
 
         @param reason: a Failure giving the reason for the process' end.
         """
-        if reason.value.exitCode != 0:
+        if reason.value.exitCode != self.expectedExitCode:
             self._getDeferred().errback(
                 ConchError(
-                    "exit code was not 0: {} ({})".format(
+                    "exit code was not {}: {} ({})".format(
+                        self.expectedExitCode,
                         reason.value.exitCode,
                         self.problems.decode("charmap"),
                     )
@@ -699,6 +701,7 @@ class CmdLineClientTests(ForwardingMixin, TestCase):
         process: ConchTestOpenSSHProcess,
         sshArgs: str = "",
         conchArgs: list[str] | None = None,
+        remoteHost: str = "127.0.0.1",
     ) -> Deferred[None]:
         """
         As for L{OpenSSHClientTestCase.execute}, except it runs the 'conch'
@@ -715,7 +718,7 @@ class CmdLineClientTests(ForwardingMixin, TestCase):
             "--user-authentications publickey "
             "-a "
             "-i rsa_test "
-            "-v ".format(port) + sshArgs + " 127.0.0.1 " + remoteCommand
+            "-v ".format(port) + sshArgs + f" {remoteHost} " + remoteCommand
         )
         split = list(cmdtemplate.split())
         env = os.environ.copy()
@@ -764,8 +767,23 @@ class CmdLineClientTests(ForwardingMixin, TestCase):
         return d
 
     def test_runWithCompressionSpecified(self) -> Deferred[None]:
+        """
+        Simple smoke test for '--compress' flag to ensure we can connect.
+        """
         return self.execute(
             remoteCommand="echo compressed",
             process=ConchTestOpenSSHProcess(),
             conchArgs=["--compress"],
         ).addCallback(self.assertEqual, b"compressed\n")
+
+    def test_connectToInvalidHost(self) -> Deferred[None]:
+        """
+        Connecting to an invalid host should fail.
+        """
+        expectError = ConchTestOpenSSHProcess()
+        expectError.expectedExitCode = 1
+        return self.execute(
+            remoteCommand="echo compressed",
+            process=expectError,
+            remoteHost="nowhere.invalid",
+        )
