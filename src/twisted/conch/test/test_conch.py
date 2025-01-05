@@ -783,7 +783,22 @@ class CmdLineClientTests(ForwardingMixin, TestCase):
         expectError = ConchTestOpenSSHProcess()
         expectError.expectedExitCode = 1
         return self.execute(
-            remoteCommand="echo compressed",
+            remoteCommand="echo nonfunctional",
             process=expectError,
             remoteHost="nowhere.invalid",
+        )
+
+    def test_testFailure(self) -> Deferred[None]:
+        """
+        L{ConchTestOpenSSHProcess} fails with a L{ConchError} if an expectation
+        is not met.
+        """
+        expectError = ConchTestOpenSSHProcess()
+        return self.assertFailure(
+            self.execute(
+                remoteCommand="echo checkfailure",
+                process=expectError,
+                remoteHost="nowhere.invalid",
+            ),
+            ConchError,
         )
