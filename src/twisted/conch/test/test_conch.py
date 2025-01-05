@@ -262,7 +262,7 @@ class ConchTestForwardingPort(protocol.Protocol):
         self.protocol.forwardingPortDisconnected(self.buffer)
 
 
-def _makeArgs(args: list[str | bytes], mod: str = "conch") -> list[bytes]:
+def _makeArgs(args: list[str], mod: str = "conch") -> list[bytes]:
     start = [
         sys.executable,
         "-c"
@@ -280,14 +280,7 @@ from twisted.conch.scripts.%s import run
 run()"""
         % mod,
     ]
-    madeArgs = []
-    for arg in start + list(args):
-        if isinstance(arg, str):
-            barg = arg.encode("utf-8")
-        else:
-            barg = arg
-        madeArgs.append(barg)
-    return madeArgs
+    return [each.encode("utf-8") for each in [*start, *args]]
 
 
 class ConchServerSetupMixin:
@@ -705,7 +698,7 @@ class CmdLineClientTests(ForwardingMixin, TestCase):
         remoteCommand: str,
         process: ConchTestOpenSSHProcess,
         sshArgs: str = "",
-        conchArgs: list[str | bytes] | None = None,
+        conchArgs: list[str] | None = None,
     ) -> Deferred[None]:
         """
         As for L{OpenSSHClientTestCase.execute}, except it runs the 'conch'
@@ -724,7 +717,7 @@ class CmdLineClientTests(ForwardingMixin, TestCase):
             "-i rsa_test "
             "-v ".format(port) + sshArgs + " 127.0.0.1 " + remoteCommand
         )
-        split: list[bytes | str] = list(cmdtemplate.split())
+        split = list(cmdtemplate.split())
         env = os.environ.copy()
         env["PYTHONPATH"] = os.pathsep.join(sys.path)
         IReactorProcess(reactor).spawnProcess(
