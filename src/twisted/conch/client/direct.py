@@ -69,8 +69,9 @@ class SSHClientTransport(transport.SSHClientTransport):
 
     def connectionLost(self, reason: Failure | None = None) -> None:
         if self.unixServer:
-            d = maybeDeferred(self.unixServer.stopListening)
-            self.unixServer = None
+            # https://github.com/twisted/twisted/issues/12418
+            d = maybeDeferred(self.unixServer.stopListening)  # pragma: no cover
+            self.unixServer = None  # pragma: no cover
         else:
             d = defer.succeed(None)
         d.addCallback(
