@@ -8,6 +8,7 @@ import socket
 import subprocess
 import sys
 from itertools import count
+from typing import Any
 
 from zope.interface import implementer
 
@@ -348,7 +349,8 @@ class ConchServerSetupMixin:
             self.echoServerV6 = reactor.listenTCP(0, EchoFactory(), interface="::1")
             self.echoPortV6 = self.echoServerV6.getHost().port
 
-    def tearDown(self) -> object:
+    def tearDown(self) -> Any:
+        # c.f. https://github.com/twisted/twisted/issues/12417
         try:
             self.conchFactory.proto.done = 1
         except AttributeError:
