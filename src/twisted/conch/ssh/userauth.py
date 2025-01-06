@@ -151,7 +151,7 @@ class SSHUserAuthServer(service.SSHService):
         self._log.debug("{user!r} trying auth {kind!r}", user=user, kind=kind)
         if kind not in self.supportedAuthentications:
             return defer.fail(error.ConchError("unsupported authentication, failing"))
-        strkind = nativeString(kind.replace(b"-", b"_"))
+        strkind = kind.replace(b"-", b"_").decode("ascii")
         f: Callable[[bytes], Deferred[_ConchPortalTuple] | None] | None = getattr(
             self, f"auth_{strkind}", None
         )
