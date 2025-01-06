@@ -120,7 +120,7 @@ class ConchTestOpenSSHProcess(protocol.ProcessProtocol):
     @ivar deferred: Set by whatever uses this object. Accessed using
     L{_getDeferred}, which destroys the value so the Deferred is not
     fired twice. Fires when the process is terminated.
-    
+
     @ivar expectedExitCode: If the process exit code is not C{expectedExitCode}
     the set C{deferred} will by triggerd with a failure.
     """
