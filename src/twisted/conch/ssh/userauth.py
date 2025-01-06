@@ -640,8 +640,9 @@ class SSHUserAuthClient(service.SSHService):
         else:
             return False
 
-    # start of auth methods: must all be (() -> bool), per
-    # SSHUserAuthClient.tryAuth
+    # Section defining C{auth_}-prefixed methods begins here: they must each be
+    # defined with the signature (() -> bool), as described by
+    # L{SSHUserAuthClient.tryAuth}.
 
     def auth_password(self) -> bool:
         """
@@ -665,7 +666,7 @@ class SSHUserAuthClient(service.SSHService):
         self.askForAuth(b"keyboard-interactive", NS(b"") + NS(b""))
         return True
 
-    # end of auth_ methods
+    # Section defining C{auth_}-prefixed methods ends here.
 
     def _cbPassword(self, password: bytes) -> None:
         """
