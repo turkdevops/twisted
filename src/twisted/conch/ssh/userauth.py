@@ -406,7 +406,7 @@ class SSHUserAuthClient(service.SSHService):
         @param kind: the authentication method
         @type kind: L{bytes}
         """
-        strkind = nativeString(kind.replace(b"-", b"_"))
+        strkind = kind.replace(b"-", b"_").decode("ascii")
         self._log.debug("trying to auth with {kind}", kind=kind)
         f: Callable[[], Deferred[bool]] | None = getattr(self, "auth_" + strkind, None)
         return f() if f is not None else None
