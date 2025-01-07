@@ -461,7 +461,7 @@ class _CommandTransport(SSHClientTransport):
         assert transport is not None
         peer = transport.getPeer()
         assert isinstance(peer, (IPv4Address, IPv6Address))
-        ip = networkString(peer.host)
+        ip = peer.host.encode("ascii")
         self._state = b"SECURING"
         return self.creator.knownHosts.verifyHostKey(
             self.creator.ui, hostname, ip, Key.fromString(hostKey)
