@@ -42,7 +42,7 @@ from twisted.internet.interfaces import (
 )
 from twisted.internet.protocol import Factory
 from twisted.logger import Logger
-from twisted.python.compat import nativeString, networkString
+from twisted.python.compat import nativeString
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 
