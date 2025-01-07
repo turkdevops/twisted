@@ -69,6 +69,12 @@ class SSHClientTransport(transport.SSHClientTransport):
 
     def connectionLost(self, reason: Failure | None = None) -> None:
         if self.unixServer:
+            # The C{unixServer} attribute is untested, and it's not entirely
+            # clear that it does anything at all. It appears to be a vestigial
+            # attempt to support something like OpenSSH's ControlMaster client
+            # option; at some point we should either document and test it, or
+            # remove it.
+
             # https://github.com/twisted/twisted/issues/12418
             d = maybeDeferred(self.unixServer.stopListening)  # pragma: no cover
             self.unixServer = None  # pragma: no cover
