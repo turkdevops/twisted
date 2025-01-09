@@ -97,11 +97,13 @@ class Request(Copyable, http.Request, components.Componentized):
     _encoder = None
     _log = Logger()
 
-    def __init__(self, channel, *args, **kw):
-        _HTTPRequest.__init__(self, channel, *args, **kw)
+    def __init__(self, channel, *args, parseBody: Optional[bool] = None, **kw):
+        if parseBody is None:
+            parseBodyBool = channel.site._parseBody
+        else:
+            parseBodyBool = parseBody
+        _HTTPRequest.__init__(self, channel, *args, parseBody=parseBodyBool, **kw)
         components.Componentized.__init__(self)
-        # Disable parsing bodies if that's what the Site set:
-        self.parseBody = channel.site.parseBody
 
     def getStateToCopyFor(self, issuer):
         x = self.__dict__.copy()
@@ -778,11 +780,6 @@ class Site(HTTPFactory):
 
     @ivar sessionCheckTime: Deprecated and unused. See
         L{Session.sessionTimeout} instead.
-
-    @ivar parseBody: If C{True}, the default, parse MIME multipart and
-        URL-encoded body uploads into C{request.args}. This can use large
-        amounts of memory for large uploads.
-    @type parseBody: C{bool}
     """
 
     counter = 0
@@ -791,9 +788,11 @@ class Site(HTTPFactory):
     sessionFactory = Session
     sessionCheckTime = 1800
     _entropy = os.urandom
-    parseBody: bool = True
+    _parseBody: bool
 
-    def __init__(self, resource, requestFactory=None, *args, **kwargs):
+    def __init__(
+        self, resource, requestFactory=None, *args, parseBody: bool = True, **kwargs
+    ):
         """
         @param resource: The root of the resource hierarchy.  All request
             traversal for requests received by this factory will begin at this
@@ -802,6 +801,10 @@ class Site(HTTPFactory):
         @param requestFactory: Overwrite for default requestFactory.
         @type requestFactory: C{callable} or C{class}.
 
+        @param parseBody: If C{True}, the default, parse MIME multipart and
+            URL-encoded body uploads into C{request.args}. This can use large
+            amounts of memory for large uploads.
+
         @see: L{twisted.web.http.HTTPFactory.__init__}
         """
         super().__init__(*args, **kwargs)
@@ -809,6 +812,7 @@ class Site(HTTPFactory):
         self.resource = resource
         if requestFactory is not None:
             self.requestFactory = requestFactory
+        self._parseBody = parseBody
 
     def _openLogFile(self, path):
         from twisted.python import logfile

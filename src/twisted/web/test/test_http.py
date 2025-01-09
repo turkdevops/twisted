@@ -8,6 +8,7 @@ Test HTTP support.
 import base64
 import calendar
 import random
+from functools import partial
 from io import BytesIO, TextIOWrapper
 from itertools import cycle
 from typing import Sequence, Union
@@ -2542,9 +2543,9 @@ abasdfg
         self.assertEqual(processed[0].args, {b"text": [b"abasdfg"]})
 
         # Now check the disabled case:
-        self.assertEqual(MyRequest.parseBody, True)
-        MyRequest.parseBody = False
-        channel = self.runRequest(req, MyRequest, success=False)
+        channel = self.runRequest(
+            req, partial(MyRequest, parseBody=False), success=False
+        )
         self.assertEqual(channel.transport.value(), b"HTTP/1.0 200 OK\r\n\r\ndone")
         self.assertEqual(len(processed), 2)
         self.assertEqual(processed[1].args, {})
@@ -2589,9 +2590,11 @@ Content-Length: """
         self.assertEqual(processed[0].args, {b"uploadedfile": [b"abasdfg"]})
 
         # Now check the disabled case:
-        self.assertEqual(MyRequest.parseBody, True)
-        MyRequest.parseBody = False
-        channel = self.runRequest(req.encode("ascii") + body, MyRequest, success=False)
+        channel = self.runRequest(
+            req.encode("ascii") + body,
+            partial(MyRequest, parseBody=False),
+            success=False,
+        )
         self.assertEqual(channel.transport.value(), b"HTTP/1.0 200 OK\r\n\r\ndone")
         self.assertEqual(len(processed), 2)
         self.assertEqual(processed[1].args, {})

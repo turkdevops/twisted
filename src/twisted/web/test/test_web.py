@@ -959,19 +959,19 @@ class RequestTests(unittest.TestCase):
 
     def test_parseBodySetFromSite(self):
         """
-        C{Request.parseBody} is set to match C{Site.parseBody}.
+        C{Request._parseBody} is set to match C{Site._parseBody}.
         """
         site = server.Site(resource.Resource())
-        self.assertEqual(site.parseBody, True)
+        self.assertEqual(site._parseBody, True)
         channel = DummyChannel()
         channel.site = site
 
         request = server.Request(channel)
-        self.assertEqual(request.parseBody, True)
+        self.assertEqual(request._parseBody, True)
 
-        site.parseBody = False
+        site._parseBody = False
         request = server.Request(channel)
-        self.assertEqual(request.parseBody, False)
+        self.assertEqual(request._parseBody, False)
 
 
 class GzipEncoderTests(unittest.TestCase):

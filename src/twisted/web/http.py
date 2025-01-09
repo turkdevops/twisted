@@ -906,11 +906,6 @@ class Request:
 
     @ivar _log: A logger instance for request related messages.
     @type _log: L{twisted.logger.Logger}
-
-    @ivar parseBody: If C{True}, the default, parse MIME multipart and
-        URL-encoded body uploads into C{request.args}. This can use large
-        amounts of memory for large uploads.
-    @type parseBody: C{bool}
     """
 
     producer = None
@@ -931,13 +926,21 @@ class Request:
     _forceSSL = 0
     _disconnected = False
     _log = Logger()
-    parseBody: bool = True
+    _parseBody: bool
 
-    def __init__(self, channel: HTTPChannel, queued: object = _QUEUED_SENTINEL) -> None:
+    def __init__(
+        self,
+        channel: HTTPChannel,
+        queued: object = _QUEUED_SENTINEL,
+        parseBody: bool = True,
+    ) -> None:
         """
         @param channel: the channel we're connected to.
         @param queued: (deprecated) are we in the request queue, or can we
             start writing to the transport?
+        @param parseBody: If C{True}, the default, parse MIME multipart and
+            URL-encoded body uploads into C{request.args}. This can use large
+            amounts of memory for large uploads.
         """
         self.notifications: List[Deferred[None]] = []
         self.channel = channel
@@ -958,6 +961,7 @@ class Request:
             queued = False
 
         self.queued = queued
+        self._parseBody = parseBody
 
     def _cleanup(self):
         """
@@ -1075,7 +1079,7 @@ class Request:
         if ctype is not None:
             ctype = ctype[0]
 
-        if self.method == b"POST" and ctype and clength and self.parseBody:
+        if self.method == b"POST" and ctype and clength and self._parseBody:
             mfd = b"multipart/form-data"
             key = _parseContentType(ctype)
             if key == b"application/x-www-form-urlencoded":
