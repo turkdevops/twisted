@@ -969,9 +969,15 @@ class RequestTests(unittest.TestCase):
         request = server.Request(channel)
         self.assertEqual(request._parseBody, True)
 
-        site._parseBody = False
+        site = server.Site(resource.Resource(), parseBody=False)
+        self.assertEqual(site._parseBody, False)
+        channel.site = site
         request = server.Request(channel)
         self.assertEqual(request._parseBody, False)
+
+        # Can also set it directly:
+        request = server.Request(channel, parseBody=True)
+        self.assertEqual(request._parseBody, True)
 
 
 class GzipEncoderTests(unittest.TestCase):
