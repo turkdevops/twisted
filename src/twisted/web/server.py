@@ -97,7 +97,12 @@ class Request(Copyable, http.Request, components.Componentized):
     _encoder = None
     _log = Logger()
 
-    def __init__(self, channel, *args, parseBody: Optional[bool] = None, **kw):
+    def __init__(self, channel, *args, parseBody=None, **kw):
+        """
+        @param parseBody: By default, get this setting from the L{Site}, but
+            can also be set explicitly. If C{False}, don't parse HTTP bodies.
+        @type parseBody: C{None} or C{bool}
+        """
         if parseBody is None:
             parseBodyBool = channel.site._parseBody
         else:
@@ -790,9 +795,7 @@ class Site(HTTPFactory):
     _entropy = os.urandom
     _parseBody: bool
 
-    def __init__(
-        self, resource, requestFactory=None, *args, parseBody: bool = True, **kwargs
-    ):
+    def __init__(self, resource, requestFactory=None, *args, parseBody=True, **kwargs):
         """
         @param resource: The root of the resource hierarchy.  All request
             traversal for requests received by this factory will begin at this
@@ -804,6 +807,7 @@ class Site(HTTPFactory):
         @param parseBody: If C{True}, the default, parse MIME multipart and
             URL-encoded body uploads into C{request.args}. This can use large
             amounts of memory for large uploads.
+        @type parseBody: C{bool}
 
         @see: L{twisted.web.http.HTTPFactory.__init__}
         """
