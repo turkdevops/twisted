@@ -4,10 +4,9 @@
 
 """
 Things likely to be used by writers of unit tests.
-
-Maintainer: Jonathan Lange
 """
 
+from __future__ import annotations
 
 import inspect
 import warnings
@@ -21,6 +20,7 @@ from typing_extensions import ParamSpec
 # installs a user-specified reactor, installing the default reactor and
 # breaking reactor installation. See also #6047.
 from twisted.internet import defer, utils
+from twisted.internet.defer import _T
 from twisted.python import failure
 from twisted.trial import itrial, util
 from twisted.trial._synctest import FailTest, SkipTest, SynchronousTestCase
@@ -70,7 +70,9 @@ class TestCase(SynchronousTestCase):
         # It is run only if setUp succeeded
         self._twistedPrivateNeedsTearDown = False
 
-    def assertFailure(self, deferred, *expectedFailures):
+    def assertFailure(
+        self, deferred: defer.Deferred[_T], *expectedFailures: type[BaseException]
+    ) -> defer.Deferred[_T]:
         """
         Fail if C{deferred} does not errback with one of C{expectedFailures}.
         Returns the original Deferred with callbacks added. You will need
