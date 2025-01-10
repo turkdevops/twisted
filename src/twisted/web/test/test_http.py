@@ -2552,8 +2552,8 @@ abasdfg
 
     def test_multipartFileData(self):
         """
-        If the request has a Content-Type of C{multipart/form-data}, and
-        C{Request.PARSE_MULTIPART_UPLOADS} is true, the form data is parseable
+        If the request has a Content-Type of C{multipart/form-data}, the
+        C{Request} is told to parse the body, and the form data is parseable
         and contains files, the file portions will be added to the request's
         args.
         """
