@@ -118,7 +118,8 @@ site:
     endpoint.listen(site)
     reactor.run()
 
-
+By default Twisted Web will parse form submissions posted in HTTP request bodies into memory, which can use a lot of memory for large uploads.
+If you want to implement your own parsing logic, you can disable Twisted Web's logic by passing ``parsePOSTFormSubmission=False`` to the ``Site()`` constructor.
 
 
 
