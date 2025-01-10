@@ -957,7 +957,7 @@ class RequestTests(unittest.TestCase):
         self.assertEqual([12345], lengths)
         self.assertIs(contentFile, request.content)
 
-    def test_parseBodySetFromSite(self):
+    def test_parseBodySetFromSite(self) -> None:
         """
         C{Request._parseBody} is set to match C{Site._parseBody}.
         """
