@@ -2544,7 +2544,7 @@ abasdfg
 
         # Now check the disabled case:
         channel = self.runRequest(
-            req, partial(MyRequest, parseBody=False), success=False
+            req, partial(MyRequest, parsePOSTFormSubmission=False), success=False
         )
         self.assertEqual(channel.transport.value(), b"HTTP/1.0 200 OK\r\n\r\ndone")
         self.assertEqual(len(processed), 2)
@@ -2592,7 +2592,7 @@ Content-Length: """
         # Now check the disabled case:
         channel = self.runRequest(
             req.encode("ascii") + body,
-            partial(MyRequest, parseBody=False),
+            partial(MyRequest, parsePOSTFormSubmission=False),
             success=False,
         )
         self.assertEqual(channel.transport.value(), b"HTTP/1.0 200 OK\r\n\r\ndone")

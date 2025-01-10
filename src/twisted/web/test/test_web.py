@@ -957,27 +957,27 @@ class RequestTests(unittest.TestCase):
         self.assertEqual([12345], lengths)
         self.assertIs(contentFile, request.content)
 
-    def test_parseBodySetFromSite(self) -> None:
+    def test_parsePOSTFormSubmissionSetFromSite(self) -> None:
         """
-        C{Request._parseBody} is set to match C{Site._parseBody}.
+        C{Request._parsePOSTFormSubmission} is set to match C{Site._parsePOSTFormSubmission}.
         """
         site = server.Site(resource.Resource())
-        self.assertEqual(site._parseBody, True)
+        self.assertEqual(site._parsePOSTFormSubmission, True)
         channel = DummyChannel()
         channel.site = site
 
         request = server.Request(channel)
-        self.assertEqual(request._parseBody, True)
+        self.assertEqual(request._parsePOSTFormSubmission, True)
 
-        site = server.Site(resource.Resource(), parseBody=False)
-        self.assertEqual(site._parseBody, False)
+        site = server.Site(resource.Resource(), parsePOSTFormSubmission=False)
+        self.assertEqual(site._parsePOSTFormSubmission, False)
         channel.site = site
         request = server.Request(channel)
-        self.assertEqual(request._parseBody, False)
+        self.assertEqual(request._parsePOSTFormSubmission, False)
 
         # Can also set it directly:
-        request = server.Request(channel, parseBody=True)
-        self.assertEqual(request._parseBody, True)
+        request = server.Request(channel, parsePOSTFormSubmission=True)
+        self.assertEqual(request._parsePOSTFormSubmission, True)
 
 
 class GzipEncoderTests(unittest.TestCase):
