@@ -108,6 +108,7 @@ import os
 import re
 import tempfile
 import warnings
+from collections import defaultdict
 from email import message_from_bytes
 from email.message import EmailMessage, Message
 from io import BufferedIOBase, BytesIO, TextIOWrapper
@@ -323,7 +324,7 @@ def _getMultiPartArgs(content: bytes, ctype: bytes) -> dict[bytes, list[bytes]]:
     """
     Parse the content of a multipart/form-data request.
     """
-    result = {}
+    result = defaultdict(list)
     multiPartHeaders = b"MIME-Version: 1.0\r\n" + b"Content-Type: " + ctype + b"\r\n"
     msg = message_from_bytes(multiPartHeaders + content)
     if not msg.is_multipart():
@@ -339,7 +340,7 @@ def _getMultiPartArgs(content: bytes, ctype: bytes) -> dict[bytes, list[bytes]]:
         if not name:
             continue
         payload: bytes = part.get_payload(decode=True)  # type:ignore[assignment]
-        result[name.encode("utf8")] = [payload]
+        result[name.encode("utf8")].append(payload)
     return result
 
 
