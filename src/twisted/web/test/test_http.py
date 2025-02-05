@@ -2550,12 +2550,12 @@ abasdfg
         self.assertEqual(len(processed), 2)
         self.assertEqual(processed[1].args, {})
 
-    def test_multipartFileData(self):
+    def test_multipartFilesData(self):
         """
         If the request has a Content-Type of C{multipart/form-data}, the
-        C{Request} is told to parse the body, and the form data is parseable
-        and contains files, the file portions will be added to the request's
-        args.
+        C{Request} is told to parse the body, if the form data is parseable
+        and contains files, each of the file portions will be added to the
+        request's args in the same order.
         """
         processed = []
 
@@ -2566,10 +2566,14 @@ abasdfg
                 self.finish()
 
         body = b"""-----------------------------738837029596785559389649595
-Content-Disposition: form-data; name="uploadedfile"; filename="test"
+Content-Disposition: form-data; name="uploadedfiles"; filename="testC"
 Content-Type: application/octet-stream
 
 abasdfg
+-----------------------------738837029596785559389649595
+Content-Disposition: form-data; name="uploadedfiles"; filename="testB"
+
+qwerty
 -----------------------------738837029596785559389649595--
 """
 
@@ -2587,7 +2591,7 @@ Content-Length: """
         channel = self.runRequest(req.encode("ascii") + body, MyRequest, success=False)
         self.assertEqual(channel.transport.value(), b"HTTP/1.0 200 OK\r\n\r\ndone")
         self.assertEqual(len(processed), 1)
-        self.assertEqual(processed[0].args, {b"uploadedfile": [b"abasdfg"]})
+        self.assertEqual(processed[0].args, {b"uploadedfiles": [b"abasdfg", b"qwerty"]})
 
         # Now check the disabled case:
         channel = self.runRequest(
